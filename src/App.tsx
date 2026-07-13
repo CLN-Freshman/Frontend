@@ -276,7 +276,7 @@ const App: React.FC = () => {
     };
 
     // Check for Telegram Web App after a small delay to ensure SDK loads
-    const timer = setTimeout(checkTelegram, 50000);
+    const timer = setTimeout(checkTelegram, 3000);
     return () => clearTimeout(timer);
   }, []);
 
