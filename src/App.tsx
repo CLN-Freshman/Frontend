@@ -10,7 +10,7 @@ import {
   Heart, 
   Gem,
 } from "lucide-react";
-import { WaveBackground } from '@components/WaveBackground';
+import { WaveBackground } from '@/components/WaveBackground';
 
 interface TelegramUser {
   id: number;
