@@ -191,7 +191,7 @@ const LoadingScreen: React.FC = () => {
           transition={{ delay: 0.5, duration: 0.6 }}
           className="text-[#22C55E] font-semibold text-lg md:text-xl tracking-wide"
         >
-          Grow and Succeed
+          Learn, Grow and Succeed
         </motion.p>
 
         <motion.div
@@ -213,7 +213,7 @@ const LoadingScreen: React.FC = () => {
           transition={{ delay: 0.8, duration: 0.6 }}
           className="text-sm text-gray-500 font-medium tracking-wide"
         >
-          Preparing Your Best Experience
+          Preparing Your Best Learning Experience
         </motion.p>
       </div>
     </div>
