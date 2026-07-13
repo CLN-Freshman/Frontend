@@ -20,14 +20,12 @@ interface UserData {
 
 const Home: React.FC = () => {
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [isTelegram, setIsTelegram] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   useEffect(() => {
     const telegram = window.Telegram?.WebApp;
     
     if (telegram) {
-      setIsTelegram(true);
       const initData = telegram.initDataUnsafe;
       const user = initData?.user;
       
@@ -53,7 +51,6 @@ const Home: React.FC = () => {
         });
       }
     } else {
-      setIsTelegram(false);
       setUserData({
         firstName: 'Developer',
         lastName: '',

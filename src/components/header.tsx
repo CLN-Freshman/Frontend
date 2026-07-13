@@ -28,6 +28,21 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     return `${first}${last}`.toUpperCase();
   };
 
+  // Try to get Telegram profile photo if available
+  const getTelegramAvatar = () => {
+    if (avatarUrl) return avatarUrl;
+    
+    // Check if we can get the user's photo from Telegram
+    const telegram = window.Telegram?.WebApp;
+    if (telegram && telegram.initDataUnsafe?.user) {
+
+      return undefined;
+    }
+    return undefined;
+  };
+
+  const profileImage = getTelegramAvatar() || avatarUrl;
+
   return (
     <motion.header 
       initial={{ y: -20, opacity: 0 }}
@@ -39,9 +54,9 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-400/30 shadow-md">
-              {avatarUrl ? (
+              {profileImage ? (
                 <img 
-                  src={avatarUrl} 
+                  src={profileImage} 
                   alt={`${firstName}'s avatar`}
                   className="w-full h-full object-cover"
                 />
@@ -56,14 +71,14 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
 
           <div className="flex flex-col">
             <div className="flex items-center gap-1">
-              <span className="text-lg text-gray-900 font-semibold">
+              <span className="text-sm text-gray-500 font-medium">
                 {greeting},
               </span>
-              <span className="text-lg font-semibold text-gray-800">
+              <span className="text-sm font-semibold text-gray-800">
                 {firstName}
               </span>
             </div>
-            <span className="text-sm text-gray-400 font-semibold flex items-center justify-start">
+            <span className="text-xs text-gray-400 font-medium flex items-center justify-start">
               Ready to continue Learning?
             </span>
           </div>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Crown, Medal } from 'lucide-react';
+import { ChevronRight, Crown } from 'lucide-react';
 
 interface Leader {
   id: number;
@@ -78,10 +78,11 @@ function LeaderboardSection() {
     }
   };
 
+  // Order: 2nd (left), 1st (center), 3rd (right)
   const orderedLeaders = [leaders[1], leaders[0], leaders[2]];
 
   return (
-    <section className="flex flex-col my-4">
+    <section className="flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-semibold !text-gray-900 !text-base">
           Leaderboard
@@ -99,7 +100,6 @@ function LeaderboardSection() {
         {orderedLeaders.map((leader) => {
           const isFirst = leader.rank === 1;
           const isSecond = leader.rank === 2;
-          const isThird = leader.rank === 3;
 
           return (
             <div 

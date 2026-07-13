@@ -7,6 +7,26 @@ import Profile from '@/pages/Profile';
 import BottomNav from '@/components/BottomNav';
 import LoadingScreen from '@/components/LoadingScreen';
 
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        expand: () => void;
+        initDataUnsafe?: {
+          user?: {
+            id: number;
+            first_name: string;
+            last_name?: string;
+            username?: string;
+            language_code?: string;
+            is_premium?: boolean;
+          };
+        };
+      };
+    };
+  }
+}
+
 const AppContent: React.FC<{ loading: boolean }> = ({ loading }) => {
   const location = useLocation();
 

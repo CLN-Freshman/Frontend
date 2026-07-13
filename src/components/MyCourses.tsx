@@ -40,20 +40,18 @@ function MyCourses() {
 
   return (
     <section className="flex flex-col">
-      <div className="flex items-center justify-between mb-1">
-        <h2 className="font-semibold !text-gray-900 !text-base">
-  My Courses
-</h2>
-<Link 
-  to="/courses" 
-  className="text-blue-500 text-sm font-medium hover:text-blue-600 transition flex items-center"
->
-  View All <ChevronRight className="w-3.5 h-3.5 ml-1" />
-</Link>
+      <div className="flex items-center justify-between mb-4">        
+        <h2 className="font-semibold !text-gray-900 text-base">My Courses</h2>
+        <Link 
+          to="/courses" 
+          className="text-blue-500 text-sm font-medium hover:text-blue-600 transition flex items-center"
+        >
+          View All <ChevronRight className="w-3.5 h-3.5 ml-1" />
+        </Link>
       </div>
 
       <div className="space-y-3">
-        {courses.map((course, index) => {
+        {courses.map((course) => {
           const progress = calculateProgress(course.completedLessons, course.totalLessons);
           
           return (
@@ -72,7 +70,7 @@ function MyCourses() {
 
               {/* Course Info */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-gray-800 truncate flex items-center justify-start">
+                <h3 className="text-sm font-semibold text-gray-800 truncate">
                   {course.title}
                 </h3>
                 <div className="flex items-center gap-1 mt-1">
@@ -90,19 +88,20 @@ function MyCourses() {
                   </div>
                   <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-gradient-to-r from-blue-500 to-green-600 rounded-full transition-all duration-500"
+                      className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500"
                       style={{ width: `${progress}%` }}
                     />
                   </div>
                 </div>
               </div>
 
-<Link 
-  to={`/course/${course.id}`}
-  className="p-2 rounded-full bg-blue-50 hover:bg-blue-100 transition-colors flex-shrink-0"
->
-  <ChevronRight className="w-5 h-5 text-blue-500 hover:text-blue-600 transition-colors" />
-</Link>
+              {/* Chevron Button */}
+              <Link 
+                to={`/course/${course.id}`}
+                className="p-2 rounded-full hover:bg-gray-100 transition-colors flex-shrink-0"
+              >
+                <ChevronRight className="w-5 h-5 text-gray-400 hover:text-gray-600 transition-colors" />
+              </Link>
             </div>
           );
         })}
