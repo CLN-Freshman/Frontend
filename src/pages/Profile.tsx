@@ -1,5 +1,11 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import {
+  BarChart3,
+  Trophy,
+  Bookmark,
+  Settings,
+} from "lucide-react";
+import ProfileHeader from '@components/profile/ProfileHeader'; // Adjust the import path as needed
 
 interface ProfileProps {
   firstName?: string;
@@ -173,23 +179,21 @@ function MergedShape({ fill = "#ffffff", children, style: containerStyle, classN
 }
 
 function Profile({ firstName: propFirstName, lastName: propLastName, username: propUsername }: ProfileProps) {
-  const [greeting, setGreeting] = useState<string>('Good morning');
+  // const [greeting, setGreeting] = useState<string>('Good morning');
   const [firstName, setFirstName] = useState<string>(propFirstName || '');
   const [lastName, setLastName] = useState<string>(propLastName || '');
   const [username, setUsername] = useState<string>(propUsername || '');
-  // const [birthdate, setBirthdate] = useState<string>('');
-  // const [bio, setBio] = useState<string>('');
-  // const [avatarUrl, setAvatarUrl] = useState<string>(propAvatarUrl || '');
+  const [activeTab, setActiveTab] = useState("Stats");
 
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) {
-      setGreeting('Good morning');
-    } else if (hour < 17) {
-      setGreeting('Good afternoon');
-    } else {
-      setGreeting('Good evening');
-    }
+    // const hour = new Date().getHours();
+    // if (hour < 12) {
+    //   setGreeting('Good morning');
+    // } else if (hour < 17) {
+    //   setGreeting('Good afternoon');
+    // } else {
+    //   setGreeting('Good evening');
+    // }
 
     // If props are empty, try to get data from Telegram
     if (!propFirstName && !propLastName && !propUsername) {
@@ -199,8 +203,6 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
         setFirstName(user.first_name || '');
         setLastName(user.last_name || '');
         setUsername(user.username || '');
-        // Note: Telegram WebApp doesn't provide birthdate and bio through initDataUnsafe
-        // You would need to fetch this from your backend
       }
     }
   }, [propFirstName, propLastName, propUsername]);
@@ -224,15 +226,92 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
   // const profileImage = getTelegramAvatar() || avatarUrl;
   const formattedUsername = username?.startsWith('@') ? username : `@${username}`;
 
+  const handleBack = () => {
+    window.history.back();
+  };
+const tabs = [
+  {
+    name: "Stats",
+    icon: BarChart3,
+    content: (
+      <div>
+        <h3 className="font-semibold text-gray-800">Your Stats</h3>
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          <div className="rounded-xl bg-blue-50 p-3">
+            <p className="text-xl font-bold text-blue-600">2450</p>
+            <p className="text-xs text-gray-500">XP</p>
+          </div>
+
+          <div className="rounded-xl bg-green-50 p-3">
+            <p className="text-xl font-bold text-green-600">12</p>
+            <p className="text-xs text-gray-500">Level</p>
+          </div>
+
+          <div className="rounded-xl bg-purple-50 p-3">
+            <p className="text-xl font-bold text-purple-600">8</p>
+            <p className="text-xs text-gray-500">Streak</p>
+          </div>
+        </div>
+      </div>
+    ),
+  },
+
+  {
+    name: "Achievements",
+    icon: Trophy,
+    content: (
+      <div>
+        <h3 className="font-semibold text-gray-800">Achievements</h3>
+
+        <div className="mt-3 space-y-2">
+          <div className="rounded-xl bg-gradient-to-r from-blue-50 to-green-50 p-3">
+            🏆 First Milestone Completed
+          </div>
+
+          <div className="rounded-xl bg-gradient-to-r from-green-50 to-blue-50 p-3">
+            ⭐ Top Contributor
+          </div>
+        </div>
+      </div>
+    ),
+  },
+
+  {
+    name: "Saved",
+    icon: Bookmark,
+    content: (
+      <div>
+        <h3 className="font-semibold text-gray-800">Saved Items</h3>
+        <p className="text-sm text-gray-500 mt-2">
+          Your saved content will appear here.
+        </p>
+      </div>
+    ),
+  },
+
+  {
+    name: "Settings",
+    icon: Settings,
+    content: (
+      <div>
+        <h3 className="font-semibold text-gray-800">Settings</h3>
+        <p className="text-sm text-gray-500 mt-2">
+          Manage your profile preferences.
+        </p>
+      </div>
+    ),
+  },
+];
   return (
     <>
-      <div className="flex items-center justify-center min-h-[calc(100vh-180px)] p-4">
+      <ProfileHeader 
+        title="Profile"
+        subtitle="Manage your profile here"
+        onBack={handleBack}
+      />
+      
+      <div className="flex items-start justify-center min-h-[calc(100vh-180px)] p-4">
         <div className="text-center w-full max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold !text-gray-800">Profile</h1>
-          <p className="text-gray-500 mt-2 text-sm">
-            {greeting}, {firstName || 'User'}! Manage your account settings
-          </p>
-
           <div className="flex justify-center mt-8 px-4">
             <MergedShape fill="#f0f4ff" className="w-full max-w-[420px]">
               <div 
@@ -245,17 +324,9 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                   aspectRatio: '1/1',
                 }}
               >
-                {/* {profileImage ? (
-                  <img 
-                    src={profileImage} 
-                    alt={`${firstName}'s avatar`}
-                    className="w-full h-full object-cover rounded-2xl shadow-lg"
-                  />
-                ) : ( */}
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-5xl font-bold shadow-lg">
-                    {getInitials() || ''}
-                  </div>
-                {/* )} */}
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-5xl font-bold shadow-lg">
+                  {getInitials() || ''}
+                </div>
               </div>
               
               <div className="absolute inset-0 flex items-center justify-center">
@@ -266,27 +337,44 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                   <p className="text-blue-500 text-xs sm:text-sm font-medium">
                     {formattedUsername || ''}
                   </p>
-                  
-                  {/* <div className="flex flex-col items-center gap-1 mt-4">
-                    {birthdate && (
-                      <p className="text-gray-600 text-xs sm:text-sm">
-                        🎂 {birthdate}
-                      </p>
-                    )}
-                    {bio && (
-                      <p className="text-gray-500 text-xs sm:text-sm max-w-[200px] break-words">
-                        {bio}
-                      </p>
-                    )}
-                  </div> */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-full px-6">
+                   <div className="grid grid-cols-4 gap-2">
+  {tabs.map((tab) => {
+    const Icon = tab.icon;
+
+    return (
+      <button
+        key={tab.name}
+        onClick={() => setActiveTab(tab.name)}
+        className={`flex flex-col items-center transition-colors ${
+          activeTab === tab.name
+            ? "text-blue-500"
+            : "text-gray-600 hover:text-blue-500"
+        }`}
+      >
+        <Icon size={22} />
+        <span className="text-[11px] mt-1">
+          {tab.name}
+        </span>
+
+        {activeTab === tab.name && (
+          <div className="mt-1 h-1 w-1 rounded-full bg-blue-500" />
+        )}
+      </button>
+    );
+  })}
+</div>
+                  </div>
                 </div>
               </div>
             </MergedShape>
+            
           </div>
-          
-          <Link to="/" className="text-blue-500 mt-6 inline-block hover:text-blue-700 transition-colors">
-            Back to Home
-          </Link>
+          <div className="w-full max-w-[420px] mt-6 px-4">
+  <div className="rounded-2xl bg-white shadow-sm border border-gray-100 p-4 text-left">
+    {tabs.find(tab => tab.name === activeTab)?.content}
+  </div>
+</div>
         </div>
       </div>
     </>
