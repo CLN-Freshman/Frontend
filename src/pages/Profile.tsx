@@ -8,9 +8,18 @@ interface ProfileProps {
   avatarUrl?: string;
 }
 
-function MergedShape({ fill = "#ffffff", children, style: containerStyle, ...props }) {
+interface MergedShapeProps {
+  fill?: string;
+  children?: React.ReactNode;
+  style?: React.CSSProperties;
+  className?: string;
+  [key: string]: any;
+}
+
+function MergedShape({ fill = "#ffffff", children, style: containerStyle, className, ...props }: MergedShapeProps) {
   return (
     <div
+      className={className}
       style={{
         position: 'relative',
         width: '100%',
