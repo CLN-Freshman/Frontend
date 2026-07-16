@@ -5,7 +5,7 @@ interface ProfileProps {
   firstName?: string;
   lastName?: string;
   username?: string;
-  avatarUrl?: string;
+  // avatarUrl?: string;
 }
 
 interface MergedShapeProps {
@@ -172,12 +172,12 @@ function MergedShape({ fill = "#ffffff", children, style: containerStyle, classN
   );
 }
 
-function Profile({ firstName: propFirstName, lastName: propLastName, username: propUsername, avatarUrl: propAvatarUrl }: ProfileProps) {
+function Profile({ firstName: propFirstName, lastName: propLastName, username: propUsername }: ProfileProps) {
   const [greeting, setGreeting] = useState<string>('Good morning');
   const [firstName, setFirstName] = useState<string>(propFirstName || '');
   const [lastName, setLastName] = useState<string>(propLastName || '');
   const [username, setUsername] = useState<string>(propUsername || '');
-  const [avatarUrl, setAvatarUrl] = useState<string>(propAvatarUrl || '');
+  // const [avatarUrl, setAvatarUrl] = useState<string>(propAvatarUrl || '');
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -207,17 +207,17 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
     return `${first}${last}`.toUpperCase();
   };
 
-  const getTelegramAvatar = () => {
-    if (avatarUrl) return avatarUrl;
+  // const getTelegramAvatar = () => {
+  //   if (avatarUrl) return avatarUrl;
     
-    const telegram = window.Telegram?.WebApp;
-    if (telegram && telegram.initDataUnsafe?.user) {
-      return undefined;
-    }
-    return undefined;
-  };
+  //   const telegram = window.Telegram?.WebApp;
+  //   if (telegram && telegram.initDataUnsafe?.user) {
+  //     return undefined;
+  //   }
+  //   return undefined;
+  // };
 
-  const profileImage = getTelegramAvatar() || avatarUrl;
+  // const profileImage = getTelegramAvatar() || avatarUrl;
   const formattedUsername = username?.startsWith('@') ? username : `@${username}`;
 
   return (
@@ -241,17 +241,17 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                   aspectRatio: '1/1',
                 }}
               >
-                {profileImage ? (
+                {/* {profileImage ? (
                   <img 
                     src={profileImage} 
                     alt={`${firstName}'s avatar`}
                     className="w-full h-full object-cover rounded-2xl shadow-lg"
                   />
-                ) : (
+                ) : ( */}
                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-5xl font-bold shadow-lg">
                     {getInitials() || 'JD'}
                   </div>
-                )}
+                {/* )} */}
               </div>
               
               <div className="absolute inset-0 flex items-center justify-center">
