@@ -249,7 +249,7 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                   />
                 ) : ( */}
                   <div className="w-full h-full bg-gradient-to-br from-blue-500 to-green-500 rounded-2xl flex items-center justify-center text-white text-5xl font-bold shadow-lg">
-                    {getInitials() || 'JD'}
+                    {getInitials() || ''}
                   </div>
                 {/* )} */}
               </div>
