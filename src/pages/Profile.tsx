@@ -186,7 +186,7 @@ function MergedShape({ fill = "#ffffff", children, style: containerStyle, classN
   );
 }
 
-function Profile({ firstName = "John", lastName = "Doe", username = "@johndoe", avatarUrl }: ProfileProps) {
+function Profile({ firstName, lastName, username, avatarUrl }: ProfileProps) {
   const [greeting, setGreeting] = useState<string>('Good morning');
 
   useEffect(() => {
