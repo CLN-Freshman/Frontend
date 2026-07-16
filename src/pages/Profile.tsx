@@ -177,8 +177,8 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
   const [firstName, setFirstName] = useState<string>(propFirstName || '');
   const [lastName, setLastName] = useState<string>(propLastName || '');
   const [username, setUsername] = useState<string>(propUsername || '');
-  const [birthdate, setBirthdate] = useState<string>('');
-  const [bio, setBio] = useState<string>('');
+  // const [birthdate, setBirthdate] = useState<string>('');
+  // const [bio, setBio] = useState<string>('');
   // const [avatarUrl, setAvatarUrl] = useState<string>(propAvatarUrl || '');
 
   useEffect(() => {
@@ -267,7 +267,7 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                     {formattedUsername || ''}
                   </p>
                   
-                  <div className="flex flex-col items-center gap-1 mt-4">
+                  {/* <div className="flex flex-col items-center gap-1 mt-4">
                     {birthdate && (
                       <p className="text-gray-600 text-xs sm:text-sm">
                         🎂 {birthdate}
@@ -278,7 +278,7 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                         {bio}
                       </p>
                     )}
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </MergedShape>
