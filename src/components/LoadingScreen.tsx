@@ -109,7 +109,7 @@ const LoadingScreen: React.FC = () => {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="text-center space-y-1"
         >
-          <h1 className="text-[14rem] font-black leading-none tracking-tight [text-shadow:_0_2px_30px_rgba(37,99,235,0.35)]">
+          <h1 className="text-8xl font-black leading-none tracking-tight [text-shadow:_0_2px_30px_rgba(37,99,235,0.35)]">
             <span className="bg-gradient-to-r from-[#2563EB] via-[#3B82F6] to-[#22C55E] bg-clip-text text-transparent">
               CLN
             </span>
