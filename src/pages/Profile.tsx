@@ -177,6 +177,8 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
   const [firstName, setFirstName] = useState<string>(propFirstName || '');
   const [lastName, setLastName] = useState<string>(propLastName || '');
   const [username, setUsername] = useState<string>(propUsername || '');
+  const [birthdate, setBirthdate] = useState<string>('');
+  const [bio, setBio] = useState<string>('');
   // const [avatarUrl, setAvatarUrl] = useState<string>(propAvatarUrl || '');
 
   useEffect(() => {
@@ -197,6 +199,8 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
         setFirstName(user.first_name || '');
         setLastName(user.last_name || '');
         setUsername(user.username || '');
+        // Note: Telegram WebApp doesn't provide birthdate and bio through initDataUnsafe
+        // You would need to fetch this from your backend
       }
     }
   }, [propFirstName, propLastName, propUsername]);
@@ -263,19 +267,17 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
                     {formattedUsername || ''}
                   </p>
                   
-                  <div className="flex justify-center gap-6 mt-4">
-                    <div>
-                      <p className="text-gray-700 font-semibold text-sm">24</p>
-                      <p className="text-gray-400 text-xs">Posts</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-700 font-semibold text-sm">156</p>
-                      <p className="text-gray-400 text-xs">Followers</p>
-                    </div>
-                    <div>
-                      <p className="text-gray-700 font-semibold text-sm">89</p>
-                      <p className="text-gray-400 text-xs">Following</p>
-                    </div>
+                  <div className="flex flex-col items-center gap-1 mt-4">
+                    {birthdate && (
+                      <p className="text-gray-600 text-xs sm:text-sm">
+                        🎂 {birthdate}
+                      </p>
+                    )}
+                    {bio && (
+                      <p className="text-gray-500 text-xs sm:text-sm max-w-[200px] break-words">
+                        {bio}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
