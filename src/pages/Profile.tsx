@@ -257,10 +257,10 @@ function Profile({ firstName: propFirstName, lastName: propLastName, username: p
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center p-4 mt-12">
                   <p className="text-gray-700 font-medium text-base sm:text-lg">
-                    {firstName || 'John'} {lastName || 'Doe'}
+                    {firstName || ''} {lastName || ''}
                   </p>
                   <p className="text-blue-500 text-xs sm:text-sm font-medium">
-                    {formattedUsername || '@johndoe'}
+                    {formattedUsername || ''}
                   </p>
                   
                   <div className="flex justify-center gap-6 mt-4">
