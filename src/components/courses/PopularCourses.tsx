@@ -85,7 +85,8 @@ function PopularCourses() {
   const maxIndex = totalCards - 1;
 
   // Snap to nearest card on drag end
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+  // Fixed: Removed unused 'event' parameter by prefixing with underscore
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = cardWidth * 0.3; // 30% of card width to trigger snap
     const offset = info.offset.x;
     
@@ -157,7 +158,7 @@ function PopularCourses() {
         <motion.div
           className="flex gap-4 cursor-grab active:cursor-grabbing"
           style={{ 
-            x: translateX,
+            x: translateX as any, // Fixed: Type assertion for MotionValue
             width: cardWidth ? `${totalCards * (cardWidth + 16) - 16}px` : 'auto',
             touchAction: 'none' // Allow drag in both directions
           }}
@@ -252,6 +253,21 @@ function PopularCourses() {
         )}
       </div>
 
+      {/* Dot Indicators - restored */}
+      <div className="flex justify-center gap-2 mt-4">
+        {popularCourses.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setCurrentIndex(i)}
+            className={`transition-all duration-300 rounded-full touch-manipulation ${
+              i === currentIndex 
+                ? 'w-8 h-2 bg-gradient-to-r from-blue-600 to-green-600' 
+                : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+            }`}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
+      </div>
 
       {/* Swipe hint animation */}
       {currentIndex === 0 && (
