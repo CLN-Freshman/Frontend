@@ -194,11 +194,6 @@ function PopularCourses() {
                     draggable={false}
                   />
                   
-                  {/* Price Badge */}
-                  <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm px-3 py-1 rounded-lg text-sm font-bold text-blue-600 shadow-md">
-                    {course.price}
-                  </div>
-                  
                   {/* Level Badge */}
                   <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-white font-medium">
                     {course.level}
@@ -211,11 +206,6 @@ function PopularCourses() {
                   <h3 className="text-base font-bold text-gray-800 line-clamp-2 mb-1.5 group-hover:text-blue-600 transition-colors duration-200 text-left">
                     {course.title}
                   </h3>
-                  
-                  {/* Instructor - left aligned */}
-                  <p className="text-sm text-gray-500 mb-2.5 text-left">
-                    {course.instructor}
-                  </p>
 
                   {/* Stats - left aligned */}
                   <div className="flex items-center justify-start gap-4 text-sm text-gray-600">
