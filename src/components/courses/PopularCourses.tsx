@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, useMotionValue, useTransform, type PanInfo } from 'framer-motion';
+import { motion, useMotionValue, type PanInfo } from 'framer-motion';
 import { BookOpen, Clock, Star, Users } from 'lucide-react';
 
 // Sample popular courses data
@@ -85,7 +85,6 @@ function PopularCourses() {
   const maxIndex = totalCards - 1;
 
   // Snap to nearest card on drag end
-  // Fixed: Removed unused 'event' parameter by prefixing with underscore
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     const threshold = cardWidth * 0.3; // 30% of card width to trigger snap
     const offset = info.offset.x;
@@ -110,14 +109,11 @@ function PopularCourses() {
     }
   }, [cardWidth, totalCards]);
 
-  // Calculate translateX based on current index
-  const translateX = useTransform(
-    dragX,
-    (value) => {
-      const baseOffset = currentIndex * (cardWidth + 16);
-      return -(baseOffset + value);
-    }
-  );
+  // Calculate the x position based on current index and drag
+  const getX = () => {
+    const baseOffset = currentIndex * (cardWidth + 16);
+    return -(baseOffset + dragX.get());
+  };
 
   // Update dragX when currentIndex changes
   useEffect(() => {
@@ -152,15 +148,13 @@ function PopularCourses() {
         className="relative overflow-hidden rounded-xl touch-pan-y"
         ref={containerRef}
         style={{ 
-          touchAction: 'pan-y' // Prevent vertical scroll interference
+          touchAction: 'pan-y'
         }}
       >
         <motion.div
           className="flex gap-4 cursor-grab active:cursor-grabbing"
           style={{ 
-            x: translateX as any, // Fixed: Type assertion for MotionValue
             width: cardWidth ? `${totalCards * (cardWidth + 16) - 16}px` : 'auto',
-            touchAction: 'none' // Allow drag in both directions
           }}
           drag="x"
           dragX={dragX}
@@ -169,6 +163,8 @@ function PopularCourses() {
           onDragEnd={handleDragEnd}
           dragMomentum={false}
           whileTap={{ cursor: 'grabbing' }}
+          animate={{ x: getX() }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
           {popularCourses.map((course, index) => (
             <motion.div
@@ -253,7 +249,7 @@ function PopularCourses() {
         )}
       </div>
 
-      {/* Dot Indicators - restored */}
+      {/* Dot Indicators */}
       <div className="flex justify-center gap-2 mt-4">
         {popularCourses.map((_, i) => (
           <button
