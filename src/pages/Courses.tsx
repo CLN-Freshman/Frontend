@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ArrowRight, Sparkles } from 'lucide-react';
+import PopularCourses from '@/components/courses/PopularCourses';
 
 function Courses() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -185,32 +186,7 @@ function Courses() {
                 </div>
               </div>
             </motion.div>
-
-            {/* Regular Course Cards */}
-            {[1, 2, 3].map((course, index) => (
-              <motion.div
-                key={course}
-                className="p-4 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-white/50"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (index + 1) * 0.1 }}
-                whileHover={{ 
-                  scale: 1.02,
-                  boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1)"
-                }}
-              >
-                <h3 className="text-base font-semibold text-gray-800">Course {course}</h3>
-                <p className="text-sm text-gray-600 mt-1.5">Description goes here</p>
-                <div className="mt-2.5 flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 text-xs font-medium text-blue-600 bg-blue-100 rounded-full">
-                    Beginner
-                  </span>
-                  <span className="px-2.5 py-0.5 text-xs font-medium text-purple-600 bg-purple-100 rounded-full">
-                    10 lessons
-                  </span>
-                </div>
-              </motion.div>
-            ))}
+          <PopularCourses />
           </div>
         </motion.section>
       </main>
