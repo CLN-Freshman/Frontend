@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, useMotionValue, type PanInfo } from 'framer-motion';
+import { motion, type PanInfo } from 'framer-motion';
 import { BookOpen, Clock, Star, Users } from 'lucide-react';
 
 // Sample popular courses data
