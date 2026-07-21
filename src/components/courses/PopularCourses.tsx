@@ -62,7 +62,6 @@ function PopularCourses() {
   const [cardWidth, setCardWidth] = useState(0);
   
   // For drag/swipe
-  const dragX = useMotionValue(0);
   const dragConstraints = useRef({ left: 0, right: 0 });
 
   // Calculate card width based on container
@@ -109,16 +108,7 @@ function PopularCourses() {
     }
   }, [cardWidth, totalCards]);
 
-  // Calculate the x position based on current index and drag
-  const getX = () => {
-    const baseOffset = currentIndex * (cardWidth + 16);
-    return -(baseOffset + dragX.get());
-  };
-
-  // Update dragX when currentIndex changes
-  useEffect(() => {
-    dragX.set(0);
-  }, [currentIndex, dragX]);
+const x = -(currentIndex * (cardWidth + 16));
 
   return (
     <motion.section 
@@ -131,7 +121,7 @@ function PopularCourses() {
       <div className="flex items-center justify-between mb-4 px-1">
         <div>
           <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <span className="bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+            <span>
               Popular Courses
             </span>
           </h2>
@@ -152,20 +142,21 @@ function PopularCourses() {
         }}
       >
         <motion.div
-          className="flex gap-4 cursor-grab active:cursor-grabbing"
-          style={{ 
-            width: cardWidth ? `${totalCards * (cardWidth + 16) - 16}px` : 'auto',
-          }}
-          drag="x"
-          dragX={dragX}
-          dragConstraints={dragConstraints.current}
-          dragElastic={0.1}
-          onDragEnd={handleDragEnd}
-          dragMomentum={false}
-          whileTap={{ cursor: 'grabbing' }}
-          animate={{ x: getX() }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        >
+  className="flex gap-4 cursor-grab active:cursor-grabbing"
+  style={{
+    width: cardWidth
+      ? `${totalCards * (cardWidth + 16) - 16}px`
+      : "auto",
+  }}
+  drag="x"
+  dragConstraints={dragConstraints.current}
+  dragElastic={0.1}
+  dragMomentum={false}
+  onDragEnd={handleDragEnd}
+  whileTap={{ cursor: "grabbing" }}
+  animate={{ x }}
+  transition={{ type: "spring", stiffness: 300, damping: 30 }}
+>
           {popularCourses.map((course, index) => (
             <motion.div
               key={course.id}
