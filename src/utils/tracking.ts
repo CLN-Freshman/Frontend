@@ -85,12 +85,24 @@ const validateUserData = (user: TelegramUser): boolean => {
 /**
  * Track user access - creates or updates user record
  */
+// frontend/src/utils/tracking.ts - Update the trackUserAccess function
 export const trackUserAccess = async (): Promise<User | null> => {
   try {
-    const telegramUser = getTelegramUser();
+    console.log('🚀 Starting trackUserAccess...');
+    console.log('📍 Environment:', import.meta.env.MODE);
+    console.log('📍 Supabase URL:', import.meta.env.VITE_SUPABASE_URL ? 'Set ✅' : 'Missing ❌');
+    console.log('📍 Supabase Key:', import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Set ✅' : 'Missing ❌');
     
-    if (!telegramUser || !validateUserData(telegramUser)) {
-      console.warn('No valid Telegram user data available');
+    const telegramUser = getTelegramUser();
+    console.log('📱 Telegram user data:', telegramUser);
+    
+    if (!telegramUser) {
+      console.error('❌ No Telegram user found');
+      return null;
+    }
+
+    if (!validateUserData(telegramUser)) {
+      console.error('❌ Invalid Telegram user data - missing ID');
       return null;
     }
 
@@ -104,6 +116,9 @@ export const trackUserAccess = async (): Promise<User | null> => {
       last_accessed_at: new Date().toISOString()
     };
 
+    console.log('📝 User data to save:', userData);
+    console.log('🔍 Checking if user exists in Supabase...');
+
     // Check if user already exists
     const { data: existingUser, error: fetchError } = await supabase
       .from('users')
@@ -111,15 +126,20 @@ export const trackUserAccess = async (): Promise<User | null> => {
       .eq('telegram_id', telegramUser.id)
       .single<User>();
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      console.error('Error fetching user:', fetchError);
-      throw fetchError;
+    if (fetchError) {
+      console.error('❌ Error fetching user:', fetchError);
+      if (fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+      console.log('ℹ️ User not found, will create new user');
+    } else {
+      console.log('✅ User found:', existingUser);
     }
 
     let user: User | null = null;
 
     if (existingUser) {
-      // User exists - update access count and last accessed
+      console.log('🔄 Updating existing user...');
       const { data, error } = await supabase
         .from('users')
         .update({
@@ -134,10 +154,14 @@ export const trackUserAccess = async (): Promise<User | null> => {
         .select()
         .single<User>();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error updating user:', error);
+        throw error;
+      }
       user = data;
+      console.log('✅ User updated:', user);
     } else {
-      // New user - create record
+      console.log('🆕 Creating new user...');
       const { data, error } = await supabase
         .from('users')
         .insert([{
@@ -148,24 +172,26 @@ export const trackUserAccess = async (): Promise<User | null> => {
         .select()
         .single<User>();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error creating user:', error);
+        throw error;
+      }
       user = data;
-      
-      console.log('New user tracked:', user);
+      console.log('✅ New user created:', user);
     }
 
     // Track session start
     if (user) {
+      console.log('📊 Tracking session start...');
       await trackSessionStart(user.id);
     }
 
     return user;
   } catch (error) {
-    console.error('Error tracking user access:', error);
+    console.error('❌ Fatal error in trackUserAccess:', error);
     return null;
   }
 };
-
 /**
  * Track session start
  */
