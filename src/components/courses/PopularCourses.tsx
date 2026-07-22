@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, type PanInfo } from 'framer-motion';
 import { BookOpen, Clock, Star, Users } from 'lucide-react';
-import { supabase } from '../../../utils/supabase';
+import { supabase } from '../../utils/supabase';
 
 interface Course {
   id: string;
