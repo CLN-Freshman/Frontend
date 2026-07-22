@@ -34,7 +34,6 @@ function PopularCourses() {
       try {
         setLoading(true);
         
-        // Get published courses, ordered by popularity (students enrolled)
         const { data, error } = await supabase
           .from('courses')
           .select('*')
@@ -47,7 +46,6 @@ function PopularCourses() {
           return;
         }
 
-        // Transform data to match the component's expected format
         const formattedCourses = (data || []).map((course: any) => ({
           id: course.id,
           title: course.title,
@@ -78,22 +76,24 @@ function PopularCourses() {
       if (containerRef.current) {
         const containerW = containerRef.current.offsetWidth;
         setContainerWidth(containerW);
-        // Cards take 85% of container width, with a max width
+        // Cards take 85% of container width
         const cardW = Math.min(containerW * 0.85, 400);
         setCardWidth(cardW);
       }
     };
 
-    calculateWidths();
+    // Initial calculation
+    setTimeout(calculateWidths, 50);
+    
     window.addEventListener('resize', calculateWidths);
     return () => window.removeEventListener('resize', calculateWidths);
-  }, []);
+  }, [courses.length]);
 
   // Update drag constraints whenever card width or container width changes
   useEffect(() => {
     if (containerWidth > 0 && cardWidth > 0 && courses.length > 0) {
-      const gap = 16; // gap between cards
-      const totalWidth = courses.length * (cardWidth + gap) - gap;
+      const gap = 16;
+      const totalWidth = courses.length * (cardWidth + gap);
       const maxDrag = Math.max(0, totalWidth - containerWidth);
       dragConstraints.current = {
         left: -maxDrag,
@@ -101,6 +101,11 @@ function PopularCourses() {
       };
     }
   }, [cardWidth, containerWidth, courses.length]);
+
+  // Reset index when courses change
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [courses.length]);
 
   // Get level label
   const getLevelLabel = (level: string) => {
@@ -132,10 +137,24 @@ function PopularCourses() {
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (totalCards === 0 || cardWidth === 0) return;
     
-    const threshold = cardWidth * 0.25; // 25% of card width to trigger snap
+    // Use velocity to determine if we should snap
+    const velocity = info.velocity.x;
     const offset = info.offset.x;
     
-    // Calculate which card we should snap to
+    // If velocity is significant, snap in that direction
+    if (Math.abs(velocity) > 500) {
+      if (velocity < 0 && currentIndex < maxIndex) {
+        setCurrentIndex(currentIndex + 1);
+        return;
+      } else if (velocity > 0 && currentIndex > 0) {
+        setCurrentIndex(currentIndex - 1);
+        return;
+      }
+    }
+    
+    // Otherwise use offset threshold
+    const threshold = cardWidth * 0.2;
+    
     let newIndex = currentIndex;
     if (offset < -threshold && currentIndex < maxIndex) {
       newIndex = currentIndex + 1;
@@ -148,12 +167,13 @@ function PopularCourses() {
 
   // Calculate the x position for the carousel
   const getXPosition = () => {
-    if (cardWidth === 0 || containerWidth === 0) return 0;
+    if (cardWidth === 0 || containerWidth === 0 || courses.length === 0) return 0;
+    
     const gap = 16;
     // Calculate how much to shift to show the current card
     const shift = currentIndex * (cardWidth + gap);
     // Ensure we don't go past the end
-    const totalWidth = courses.length * (cardWidth + gap) - gap;
+    const totalWidth = courses.length * (cardWidth + gap);
     const maxShift = Math.max(0, totalWidth - containerWidth);
     return -Math.min(shift, maxShift);
   };
@@ -213,7 +233,7 @@ function PopularCourses() {
 
   return (
     <motion.section 
-      className="mt-6 z-10 relative"
+      className="mt-6 z-10 relative w-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
@@ -236,19 +256,15 @@ function PopularCourses() {
 
       {/* Carousel Container */}
       <div 
-        className="relative overflow-hidden rounded-xl touch-pan-y"
+        className="relative overflow-hidden rounded-xl touch-pan-y w-full"
         ref={containerRef}
         style={{ 
-          touchAction: 'pan-y'
+          touchAction: 'pan-y',
+          minHeight: '380px'
         }}
       >
         <motion.div
           className="flex gap-4 cursor-grab active:cursor-grabbing"
-          style={{
-            width: cardWidth > 0 
-              ? `${courses.length * (cardWidth + 16) - 16}px`
-              : "auto",
-          }}
           drag="x"
           dragConstraints={dragConstraints.current}
           dragElastic={0.1}
@@ -257,6 +273,11 @@ function PopularCourses() {
           whileTap={{ cursor: "grabbing" }}
           animate={{ x: getXPosition() }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          style={{
+            width: cardWidth > 0 && courses.length > 0
+              ? `${courses.length * (cardWidth + 16)}px`
+              : "auto",
+          }}
         >
           {courses.map((course, index) => (
             <motion.div
@@ -269,11 +290,11 @@ function PopularCourses() {
               animate={{ 
                 opacity: 1, 
                 scale: 1,
-                transition: { delay: index * 0.1 }
+                transition: { delay: Math.min(index * 0.05, 0.3) }
               }}
             >
               <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-white/50 h-full hover:shadow-xl transition-shadow duration-300 group">
-                {/* Thumbnail - larger for mobile */}
+                {/* Thumbnail */}
                 <div className="relative h-48 overflow-hidden bg-gray-100">
                   <img 
                     src={course.thumbnail || getFallbackImage(course.title)} 
@@ -282,7 +303,6 @@ function PopularCourses() {
                     loading="lazy"
                     draggable={false}
                     onError={(e) => {
-                      // If image fails to load, use fallback
                       (e.target as HTMLImageElement).src = getFallbackImage(course.title);
                     }}
                   />
@@ -293,14 +313,12 @@ function PopularCourses() {
                   </div>
                 </div>
 
-                {/* Content - all text left-aligned */}
+                {/* Content */}
                 <div className="p-4">
-                  {/* Title - left aligned */}
                   <h3 className="text-base font-bold text-gray-800 line-clamp-2 mb-1.5 group-hover:text-blue-600 transition-colors duration-200 text-left">
                     {course.title}
                   </h3>
 
-                  {/* Stats - left aligned */}
                   <div className="flex items-center justify-start gap-4 text-sm text-gray-600">
                     <span className="flex items-center gap-1.5">
                       <BookOpen className="w-4 h-4 text-blue-500" />
@@ -316,7 +334,6 @@ function PopularCourses() {
                     </span>
                   </div>
 
-                  {/* Students Count + Enroll button - left aligned */}
                   <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                     <span className="flex items-center gap-1.5 text-sm text-gray-500">
                       <Users className="w-4 h-4" />
@@ -360,26 +377,6 @@ function PopularCourses() {
           />
         ))}
       </div>
-
-      {/* Swipe hint animation */}
-      {currentIndex === 0 && courses.length > 1 && (
-        <motion.div
-          className="absolute right-4 bottom-20 text-gray-400 text-xs flex items-center gap-1 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm"
-          initial={{ opacity: 0, x: 10 }}
-          animate={{ 
-            opacity: [0, 1, 0],
-            x: [10, 0, -10]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            repeatDelay: 3
-          }}
-        >
-          <span>Swipe</span>
-          <span className="text-lg">👈</span>
-        </motion.div>
-      )}
     </motion.section>
   );
 }
