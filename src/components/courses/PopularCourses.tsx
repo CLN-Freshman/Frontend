@@ -134,38 +134,21 @@ function PopularCourses() {
   const maxIndex = Math.max(0, totalCards - 1);
 
   // Snap to nearest card on drag end
-  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (totalCards === 0 || cardWidth === 0) return;
-    
-    // Use velocity to determine if we should snap
-    const velocity = info.velocity.x;
-    const offset = info.offset.x;
-    
-    // If velocity is significant, snap in that direction
-    if (Math.abs(velocity) > 500) {
-      if (velocity < 0 && currentIndex < maxIndex) {
-        setCurrentIndex(currentIndex + 1);
-        return;
-      } else if (velocity > 0 && currentIndex > 0) {
-        setCurrentIndex(currentIndex - 1);
-        return;
-      }
-    }
-    
-    // Otherwise use offset threshold
-    const threshold = cardWidth * 0.2;
-    
-    let newIndex = currentIndex;
-    if (offset < -threshold && currentIndex < maxIndex) {
-      newIndex = currentIndex + 1;
-    } else if (offset > threshold && currentIndex > 0) {
-      newIndex = currentIndex - 1;
-    }
-    
-    setCurrentIndex(newIndex);
-  };
+  const handleDragEnd = (
+  _event: MouseEvent | TouchEvent |PointerEvent,
+  info: PanInfo
+) => {
+  if (!cardWidth) return;
 
-  // Calculate the x position for the carousel
+  const threshold = cardWidth * 0.2;
+
+  if (info.offset.x < -threshold) {
+    setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
+  } else if (info.offset.x > threshold) {
+    setCurrentIndex((prev) => Math.max(prev - 1, 0));
+  }
+};
+// Calculate the x position for the carousel
   const getXPosition = () => {
     if (cardWidth === 0 || containerWidth === 0 || courses.length === 0) return 0;
     
