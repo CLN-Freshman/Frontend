@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, type PanInfo } from 'framer-motion';
 import { BookOpen, Clock, Star, Users } from 'lucide-react';
-import { supabase } from '../../utils/supabase';
+import { supabase } from '../../../utils/supabase';
 
 interface Course {
   id: string;
@@ -23,6 +23,7 @@ function PopularCourses() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const [cardWidth, setCardWidth] = useState(0);
+  const [containerWidth, setContainerWidth] = useState(0);
   
   // For drag/swipe
   const dragConstraints = useRef({ left: 0, right: 0 });
@@ -76,8 +77,9 @@ function PopularCourses() {
     const calculateWidths = () => {
       if (containerRef.current) {
         const containerW = containerRef.current.offsetWidth;
-        // Show 1.2 cards on mobile for better visibility
-        const cardW = containerW * 0.85; // Cards take 85% of container width
+        setContainerWidth(containerW);
+        // Cards take 85% of container width, with a max width
+        const cardW = Math.min(containerW * 0.85, 400);
         setCardWidth(cardW);
       }
     };
@@ -86,6 +88,19 @@ function PopularCourses() {
     window.addEventListener('resize', calculateWidths);
     return () => window.removeEventListener('resize', calculateWidths);
   }, []);
+
+  // Update drag constraints whenever card width or container width changes
+  useEffect(() => {
+    if (containerWidth > 0 && cardWidth > 0 && courses.length > 0) {
+      const gap = 16; // gap between cards
+      const totalWidth = courses.length * (cardWidth + gap) - gap;
+      const maxDrag = Math.max(0, totalWidth - containerWidth);
+      dragConstraints.current = {
+        left: -maxDrag,
+        right: 0
+      };
+    }
+  }, [cardWidth, containerWidth, courses.length]);
 
   // Get level label
   const getLevelLabel = (level: string) => {
@@ -111,36 +126,37 @@ function PopularCourses() {
   };
 
   const totalCards = courses.length;
-  const maxIndex = totalCards - 1;
+  const maxIndex = Math.max(0, totalCards - 1);
 
   // Snap to nearest card on drag end
   const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (totalCards === 0) return;
+    if (totalCards === 0 || cardWidth === 0) return;
     
-    const threshold = cardWidth * 0.3; // 30% of card width to trigger snap
+    const threshold = cardWidth * 0.25; // 25% of card width to trigger snap
     const offset = info.offset.x;
     
+    // Calculate which card we should snap to
+    let newIndex = currentIndex;
     if (offset < -threshold && currentIndex < maxIndex) {
-      setCurrentIndex(currentIndex + 1);
+      newIndex = currentIndex + 1;
     } else if (offset > threshold && currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+      newIndex = currentIndex - 1;
     }
+    
+    setCurrentIndex(newIndex);
   };
 
-  // Update drag constraints
-  useEffect(() => {
-    if (containerRef.current && cardWidth && totalCards > 0) {
-      const containerW = containerRef.current.offsetWidth;
-      const totalWidth = totalCards * cardWidth + (totalCards - 1) * 16; // 16px gap
-      const maxDrag = Math.max(0, totalWidth - containerW);
-      dragConstraints.current = {
-        left: -maxDrag,
-        right: 0
-      };
-    }
-  }, [cardWidth, totalCards]);
-
-  const x = -(currentIndex * (cardWidth + 16));
+  // Calculate the x position for the carousel
+  const getXPosition = () => {
+    if (cardWidth === 0 || containerWidth === 0) return 0;
+    const gap = 16;
+    // Calculate how much to shift to show the current card
+    const shift = currentIndex * (cardWidth + gap);
+    // Ensure we don't go past the end
+    const totalWidth = courses.length * (cardWidth + gap) - gap;
+    const maxShift = Math.max(0, totalWidth - containerWidth);
+    return -Math.min(shift, maxShift);
+  };
 
   // Loading state
   if (loading) {
@@ -229,8 +245,8 @@ function PopularCourses() {
         <motion.div
           className="flex gap-4 cursor-grab active:cursor-grabbing"
           style={{
-            width: cardWidth
-              ? `${totalCards * (cardWidth + 16) - 16}px`
+            width: cardWidth > 0 
+              ? `${courses.length * (cardWidth + 16) - 16}px`
               : "auto",
           }}
           drag="x"
@@ -239,7 +255,7 @@ function PopularCourses() {
           dragMomentum={false}
           onDragEnd={handleDragEnd}
           whileTap={{ cursor: "grabbing" }}
-          animate={{ x }}
+          animate={{ x: getXPosition() }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
         >
           {courses.map((course, index) => (
@@ -247,7 +263,7 @@ function PopularCourses() {
               key={course.id}
               className="flex-shrink-0"
               style={{ 
-                width: cardWidth ? `${cardWidth}px` : '85%',
+                width: cardWidth > 0 ? `${cardWidth}px` : '85%',
               }}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ 
