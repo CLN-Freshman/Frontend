@@ -1,4 +1,3 @@
-// frontend/src/hooks/useUserTracking.ts
 import { useState, useEffect, useRef } from 'react';
 import { 
   trackUserAccess, 
@@ -41,7 +40,7 @@ if (telegramUser) {
 } else {
   // Development: mock user
   userData = {
-    id: 999999999,
+    telegram_id: 999999999,
     username: "devuser",
     first_name: "Local",
     last_name: "Developer",
