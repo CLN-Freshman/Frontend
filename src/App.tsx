@@ -8,6 +8,8 @@ import BottomNav from '@/components/BottomNav';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useUserTracking } from '@/hooks/useUserTracking';
 
+
+
 declare global {
   interface Window {
     Telegram?: {
