@@ -19,17 +19,34 @@ export const useUserTracking = () => {
         setLoading(true);
         
         // Check if we're in a Telegram WebApp environment
-        const isTelegramWebApp = typeof window !== 'undefined' && 
-                                  window.Telegram?.WebApp?.initDataUnsafe?.user;
-        
-        if (!isTelegramWebApp) {
-          setError('This app must be opened within Telegram');
-          setLoading(false);
-          return;
-        }
+       // Check if we're in Telegram or running locally
+const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+const isDevelopment = import.meta.env.DEV;
+const bypassTelegram =
+  isDevelopment && import.meta.env.VITE_BYPASS_TELEGRAM === "true";
+
+if (!telegramUser && !bypassTelegram) {
+  setError("This app must be opened within Telegram");
+  setLoading(false);
+  return;
+}
+
 
         // Track user access - this will create or update the user in Supabase
-        const userData = await trackUserAccess();
+let userData: User | null;
+
+if (telegramUser) {
+  // Production: use real Telegram user
+  userData = await trackUserAccess();
+} else {
+  // Development: mock user
+  userData = {
+    id: 999999999,
+    username: "devuser",
+    first_name: "Local",
+    last_name: "Developer",
+  } as User;
+}
         
         if (userData) {
           setUser(userData);
