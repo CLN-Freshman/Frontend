@@ -1,5 +1,8 @@
+// src/App.tsx (or App.dev.tsx and App.prod.tsx)
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
+import Onboarding from '@/pages/Onboarding';
 import Home from '@/pages/Home';
 import Courses from '@/pages/Courses';
 import Leaderboard from '@/pages/Leaderboard';
@@ -8,32 +11,20 @@ import BottomNav from '@/components/BottomNav';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useUserTracking } from '@/hooks/useUserTracking';
 
-
-
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp: {
-        expand: () => void;
-        ready: () => void;
-        close: () => void;
-        initDataUnsafe?: {
-          user?: {
-            id: number;
-            first_name: string;
-            last_name?: string;
-            username?: string;
-            language_code?: string;
-            is_premium?: boolean;
-          };
-        };
-      };
-    };
+// Protected Route Component
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isFirstVisit } = useOnboarding();
+  
+  if (isFirstVisit) {
+    return <Navigate to="/onboarding" replace />;
   }
-}
+  
+  return <>{children}</>;
+};
 
 const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ loading, error }) => {
   const location = useLocation();
+  const { isFirstVisit } = useOnboarding();
 
   const getActiveTab = () => {
     const path = location.pathname;
@@ -65,24 +56,44 @@ const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ load
     );
   }
 
+  // If on onboarding page, show onboarding
+  if (location.pathname === '/onboarding') {
+    return <Onboarding />;
+  }
+
+  // Otherwise show main app with bottom nav
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20">
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/courses" element={<Courses />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/profile" element={<Profile />} />
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
+        <Route path="/courses" element={
+          <ProtectedRoute>
+            <Courses />
+          </ProtectedRoute>
+        } />
+        <Route path="/leaderboard" element={
+          <ProtectedRoute>
+            <Leaderboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
       </Routes>
       
-      <BottomNav activeTab={getActiveTab()} />
+      {!isFirstVisit && <BottomNav activeTab={getActiveTab()} />}
     </div>
   );
 };
 
 const App: React.FC = () => {
   const [telegramReady, setTelegramReady] = useState<boolean>(false);
-  
-  // Use the user tracking hook - this will automatically track users
   const { loading: trackingLoading, error: trackingError } = useUserTracking();
 
   useEffect(() => {
@@ -91,9 +102,7 @@ const App: React.FC = () => {
       const telegram = window.Telegram?.WebApp;
       
       if (telegram) {
-        // Expand the WebApp to full screen
         telegram.expand();
-        // Tell Telegram the app is ready
         telegram.ready();
         setTelegramReady(true);
       } else {
@@ -103,17 +112,17 @@ const App: React.FC = () => {
       }
     };
 
-    // Small delay to ensure Telegram object is available
     const timer = setTimeout(initializeTelegram, 500);
     return () => clearTimeout(timer);
   }, []);
 
-  // Combine loading states
   const isLoading = !telegramReady || trackingLoading;
 
   return (
     <Router>
-      <AppContent loading={isLoading} error={trackingError} />
+      <OnboardingProvider>
+        <AppContent loading={isLoading} error={trackingError} />
+      </OnboardingProvider>
     </Router>
   );
 };

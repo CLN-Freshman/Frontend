@@ -17,8 +17,6 @@ export const useUserTracking = () => {
       try {
         setLoading(true);
         
-        // Check if we're in a Telegram WebApp environment
-       // Check if we're in Telegram or running locally
 const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
 const isDevelopment = import.meta.env.DEV;
 const bypassTelegram =
