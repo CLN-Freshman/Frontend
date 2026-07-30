@@ -1,11 +1,20 @@
 import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabase';
-
+interface Course {
+  id: string;
+  title: string;
+  description: string;
+  instructor: string;
+  image_url: string;
+  price: number;
+  created_at: string;
+}
 
 function CourseDetail() {
   const { id } = useParams<{ id: string }>();
-  const [course, setCourse] = useState(null);
+
+  const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

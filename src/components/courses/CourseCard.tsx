@@ -1,4 +1,3 @@
-// CourseCard.tsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -11,14 +10,14 @@ interface CourseCardProps {
   course: Course;
   index: number;
   cardWidth: number;
-  onViewCourse?: (courseId: string) => void; // Made optional for backward compatibility
+  onViewCourse?: (courseId: string) => void;
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ 
   course, 
   index, 
   cardWidth,
-  onViewCourse 
+ 
 }) => {
   const navigate = useNavigate();
 

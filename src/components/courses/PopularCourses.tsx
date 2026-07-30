@@ -1,4 +1,3 @@
-// PopularCourses.tsx
 import { useState, useRef, useEffect } from 'react';
 import { motion, type PanInfo } from 'framer-motion';
 import { BookOpen, Search } from 'lucide-react';
