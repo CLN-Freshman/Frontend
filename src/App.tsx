@@ -1,8 +1,7 @@
-// src/App.tsx (or App.dev.tsx and App.prod.tsx)
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
-import Onboarding from '@/pages/Onboarding';
+// import Onboarding from '@/pages/Onboarding';
 import Home from '@/pages/Home';
 import Courses from '@/pages/Courses/Courses';
 import Leaderboard from '@/pages/Leaderboard';
@@ -17,7 +16,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   const { isFirstVisit } = useOnboarding();
   
   if (isFirstVisit) {
-    return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/" replace />;
   }
   
   return <>{children}</>;
@@ -57,10 +56,10 @@ const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ load
     );
   }
 
-  // If on onboarding page, show onboarding
-  if (location.pathname === '/onboarding') {
-    return <Onboarding />;
-  }
+  // // If on onboarding page, show onboarding
+  // if (location.pathname === '/onboarding') {
+  //   return <Onboarding />;
+  // }
 
   // Otherwise show main app with bottom nav
   return (
