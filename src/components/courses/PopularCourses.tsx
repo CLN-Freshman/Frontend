@@ -6,7 +6,7 @@ import CourseCard from './CourseCard';
 import type { Course } from '@/types/course';
 
 interface PopularCoursesProps {
-  searchQuery: string;
+  searchQuery?: string;
 }
 
 function PopularCourses({ searchQuery }: PopularCoursesProps) {
