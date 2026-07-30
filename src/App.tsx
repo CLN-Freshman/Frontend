@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+// import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 // import Onboarding from '@/pages/Onboarding';
 import Home from '@/pages/Home';
 import Courses from '@/pages/Courses/Courses';
@@ -13,18 +13,18 @@ import CourseDetail from './pages/Courses/CourseDetails';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isFirstVisit } = useOnboarding();
+  // const { isFirstVisit } = useOnboarding();
   
-  if (isFirstVisit) {
-    return <Navigate to="/" replace />;
-  }
+  // if (isFirstVisit) {
+  //   return <Navigate to="/OnBoarding" replace />;
+  // }
   
   return <>{children}</>;
 };
 
 const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ loading, error }) => {
   const location = useLocation();
-  const { isFirstVisit } = useOnboarding();
+  // const { isFirstVisit } = useOnboarding();
 
   const getActiveTab = () => {
     const path = location.pathname;
@@ -77,8 +77,9 @@ const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ load
         } />
         <Route path="/courses/:id" element={
           <ProtectedRoute>
-          <CourseDetail />
-          </ProtectedRoute>} />
+            <CourseDetail />
+          </ProtectedRoute>
+        } />
         <Route path="/leaderboard" element={
           <ProtectedRoute>
             <Leaderboard />
@@ -91,7 +92,11 @@ const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ load
         } />
       </Routes>
       
-      {!isFirstVisit && <BottomNav activeTab={getActiveTab()} />}
+      {/* BottomNav - Uncomment when onboarding is ready */}
+      {/* {!isFirstVisit && <BottomNav activeTab={getActiveTab()} />} */}
+      
+      {/* Temporarily show BottomNav for development */}
+      <BottomNav activeTab={getActiveTab()} />
     </div>
   );
 };
@@ -124,9 +129,10 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <OnboardingProvider>
+      {/* OnboardingProvider - Commented out */}
+      {/* <OnboardingProvider> */}
         <AppContent loading={isLoading} error={trackingError} />
-      </OnboardingProvider>
+      {/* </OnboardingProvider> */}
     </Router>
   );
 };
