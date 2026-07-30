@@ -4,12 +4,13 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'r
 import { OnboardingProvider, useOnboarding } from '@/contexts/OnboardingContext';
 import Onboarding from '@/pages/Onboarding';
 import Home from '@/pages/Home';
-import Courses from '@/pages/Courses';
+import Courses from '@/pages/Courses/Courses';
 import Leaderboard from '@/pages/Leaderboard';
 import Profile from '@/pages/Profile';
 import BottomNav from '@/components/BottomNav';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useUserTracking } from '@/hooks/useUserTracking';
+import CourseDetail from './pages/Courses/CourseDetails';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -75,6 +76,10 @@ const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ load
             <Courses />
           </ProtectedRoute>
         } />
+        <Route path="/courses/:id" element={
+          <ProtectedRoute>
+          <CourseDetail />
+          </ProtectedRoute>} />
         <Route path="/leaderboard" element={
           <ProtectedRoute>
             <Leaderboard />

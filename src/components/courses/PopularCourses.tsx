@@ -1,23 +1,16 @@
+// PopularCourses.tsx
 import { useState, useRef, useEffect } from 'react';
 import { motion, type PanInfo } from 'framer-motion';
-import { BookOpen, Clock, Star, Users } from 'lucide-react';
+import { BookOpen, Search } from 'lucide-react';
 import { supabase } from '../../utils/supabase';
+import CourseCard from './CourseCard';
+import type { Course } from '@/types/course';
 
-interface Course {
-  id: string;
-  title: string;
-  description: string;
-  thumbnail?: string;
-  lessons_count: number;
-  duration: string;
-  rating: number;
-  students_enrolled: number;
-  level: 'beginner' | 'intermediate' | 'advanced';
-  is_published: boolean;
-  image_url?: string;
+interface PopularCoursesProps {
+  searchQuery: string;
 }
 
-function PopularCourses() {
+function PopularCourses({ searchQuery }: PopularCoursesProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -27,6 +20,21 @@ function PopularCourses() {
   
   // For drag/swipe
   const dragConstraints = useRef({ left: 0, right: 0 });
+
+  // Filter courses based on search query
+  const filteredCourses = courses.filter((course) => {
+    const query = searchQuery.trim().toLowerCase();
+
+    if (!query) return true;
+
+    return (
+      course.title.toLowerCase().includes(query) ||
+      course.description.toLowerCase().includes(query) ||
+      course.level.toLowerCase().includes(query) ||
+      course.duration.toLowerCase().includes(query) ||
+      String(course.lessons_count).includes(query)
+    );
+  });
 
   // Fetch courses from database
   useEffect(() => {
@@ -89,77 +97,68 @@ function PopularCourses() {
     return () => window.removeEventListener('resize', calculateWidths);
   }, [courses.length]);
 
-  // Update drag constraints whenever card width or container width changes
+  // Update drag constraints based on filtered courses
   useEffect(() => {
-    if (containerWidth > 0 && cardWidth > 0 && courses.length > 0) {
+    if (containerWidth > 0 && cardWidth > 0 && filteredCourses.length > 0) {
       const gap = 16;
-      const totalWidth = courses.length * (cardWidth + gap);
+      const totalWidth = filteredCourses.length * (cardWidth + gap);
       const maxDrag = Math.max(0, totalWidth - containerWidth);
+
       dragConstraints.current = {
         left: -maxDrag,
         right: 0
       };
     }
-  }, [cardWidth, containerWidth, courses.length]);
+  }, [cardWidth, containerWidth, filteredCourses.length]);
 
-  // Reset index when courses change
+  // Reset carousel when search changes or filtered results change
   useEffect(() => {
     setCurrentIndex(0);
-  }, [courses.length]);
+  }, [filteredCourses.length, searchQuery]);
 
-  // Get level label
-  const getLevelLabel = (level: string) => {
-    const levelMap: { [key: string]: string } = {
-      'beginner': 'Beginner',
-      'intermediate': 'Intermediate',
-      'advanced': 'Advanced'
-    };
-    return levelMap[level] || level.charAt(0).toUpperCase() + level.slice(1);
-  };
-
-  // Fallback image if course has no image
-  const getFallbackImage = (title: string) => {
-    const images = [
-      'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400&h=225&fit=crop',
-      'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=225&fit=crop',
-      'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=225&fit=crop',
-      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=225&fit=crop',
-      'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=225&fit=crop',
-    ];
-    const index = title.length % images.length;
-    return images[index];
-  };
-
-  const totalCards = courses.length;
-  const maxIndex = Math.max(0, totalCards - 1);
+  // Clamp current index when filtered results change
+  useEffect(() => {
+    if (currentIndex > filteredCourses.length - 1 && filteredCourses.length > 0) {
+      setCurrentIndex(0);
+    }
+  }, [filteredCourses.length, currentIndex]);
 
   // Snap to nearest card on drag end
   const handleDragEnd = (
-  _event: MouseEvent | TouchEvent |PointerEvent,
-  info: PanInfo
-) => {
-  if (!cardWidth) return;
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
+    if (!cardWidth || filteredCourses.length === 0) return;
 
-  const threshold = cardWidth * 0.2;
+    const threshold = cardWidth * 0.2;
+    const maxIndex = filteredCourses.length - 1;
 
-  if (info.offset.x < -threshold) {
-    setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
-  } else if (info.offset.x > threshold) {
-    setCurrentIndex((prev) => Math.max(prev - 1, 0));
-  }
-};
-// Calculate the x position for the carousel
+    if (info.offset.x < -threshold) {
+      setCurrentIndex((prev) => Math.min(prev + 1, maxIndex));
+    } else if (info.offset.x > threshold) {
+      setCurrentIndex((prev) => Math.max(prev - 1, 0));
+    }
+  };
+
+  // Calculate the x position for the carousel
   const getXPosition = () => {
-    if (cardWidth === 0 || containerWidth === 0 || courses.length === 0) return 0;
+    if (
+      cardWidth === 0 ||
+      containerWidth === 0 ||
+      filteredCourses.length === 0
+    ) {
+      return 0;
+    }
     
     const gap = 16;
-    // Calculate how much to shift to show the current card
     const shift = currentIndex * (cardWidth + gap);
-    // Ensure we don't go past the end
-    const totalWidth = courses.length * (cardWidth + gap);
+    const totalWidth = filteredCourses.length * (cardWidth + gap);
     const maxShift = Math.max(0, totalWidth - containerWidth);
     return -Math.min(shift, maxShift);
   };
+
+  const totalCards = filteredCourses.length;
+  const maxIndex = Math.max(0, totalCards - 1);
 
   // Loading state
   if (loading) {
@@ -194,8 +193,8 @@ function PopularCourses() {
     );
   }
 
-  // Empty state
-  if (courses.length === 0) {
+  // Empty state - improved with search context
+  if (filteredCourses.length === 0) {
     return (
       <section className="mt-6 z-10 relative">
         <div className="flex items-center justify-between mb-4 px-1">
@@ -205,10 +204,31 @@ function PopularCourses() {
             </h2>
           </div>
         </div>
-        <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
-          <BookOpen className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500">No courses available yet</p>
-          <p className="text-sm text-gray-400 mt-1">Check back later for new courses</p>
+        <div className="bg-white rounded-2xl shadow-lg p-8 text-center border border-blue-100">
+          <div className="flex justify-center mb-4">
+            <div className="p-4 bg-gradient-to-br from-blue-50 to-green-50 rounded-full">
+              {searchQuery.trim() ? (
+                <Search className="h-12 w-12 text-blue-400" />
+              ) : (
+                <BookOpen className="h-12 w-12 text-gray-300" />
+              )}
+            </div>
+          </div>
+          {searchQuery.trim() ? (
+            <>
+              <p className="text-gray-600 font-medium">
+                No courses found for "{searchQuery.trim()}"
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                Try adjusting your search terms
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-500">No courses available yet</p>
+              <p className="text-sm text-gray-400 mt-1">Check back later for new courses</p>
+            </>
+          )}
         </div>
       </section>
     );
@@ -225,15 +245,18 @@ function PopularCourses() {
       <div className="flex items-center justify-between mb-4 px-1">
         <div>
           <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <span>
-              Popular Courses
-            </span>
+            <span>Popular Courses</span>
+            {searchQuery.trim() && (
+              <span className="text-sm font-normal text-gray-400">
+                ({totalCards} result{totalCards !== 1 ? 's' : ''})
+              </span>
+            )}
           </h2>
         </div>
         
-        {/* Course counter */}
+        {/* Course counter - prevent 1/0 */}
         <div className="text-xs text-gray-400 bg-white/80 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm">
-          {currentIndex + 1} / {totalCards}
+          {totalCards === 0 ? 0 : currentIndex + 1} / {totalCards}
         </div>
       </div>
 
@@ -257,82 +280,18 @@ function PopularCourses() {
           animate={{ x: getXPosition() }}
           transition={{ type: "spring", stiffness: 300, damping: 30 }}
           style={{
-            width: cardWidth > 0 && courses.length > 0
-              ? `${courses.length * (cardWidth + 16)}px`
+            width: cardWidth > 0 && filteredCourses.length > 0
+              ? `${filteredCourses.length * (cardWidth + 16)}px`
               : "auto",
           }}
         >
-          {courses.map((course, index) => (
-            <motion.div
+          {filteredCourses.map((course, index) => (
+            <CourseCard
               key={course.id}
-              className="flex-shrink-0"
-              style={{ 
-                width: cardWidth > 0 ? `${cardWidth}px` : '85%',
-              }}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1,
-                transition: { delay: Math.min(index * 0.05, 0.3) }
-              }}
-            >
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-white/50 h-full hover:shadow-xl transition-shadow duration-300 group">
-                {/* Thumbnail */}
-                <div className="relative h-48 overflow-hidden bg-gray-100">
-                  <img 
-                    src={course.thumbnail || getFallbackImage(course.title)} 
-                    alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    loading="lazy"
-                    draggable={false}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = getFallbackImage(course.title);
-                    }}
-                  />
-                  
-                  {/* Level Badge */}
-                  <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-sm px-3 py-1 rounded-full text-xs text-white font-medium">
-                    {getLevelLabel(course.level)}
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <h3 className="text-base font-bold text-gray-800 line-clamp-2 mb-1.5 group-hover:text-blue-600 transition-colors duration-200 text-left">
-                    {course.title}
-                  </h3>
-
-                  <div className="flex items-center justify-start gap-4 text-sm text-gray-600">
-                    <span className="flex items-center gap-1.5">
-                      <BookOpen className="w-4 h-4 text-blue-500" />
-                      {course.lessons_count} lessons
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Clock className="w-4 h-4 text-green-500" />
-                      {course.duration}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                      <span className="font-semibold text-gray-700">{course.rating}</span>
-                    </span>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5 text-sm text-gray-500">
-                      <Users className="w-4 h-4" />
-                      {course.students_enrolled.toLocaleString()} students
-                    </span>
-                    <motion.button
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors px-3 py-1.5 rounded-lg bg-blue-50/50 active:bg-blue-100"
-                      whileTap={{ scale: 0.95 }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      View Course
-                    </motion.button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
+              course={course}
+              index={index}
+              cardWidth={cardWidth}
+            />
           ))}
         </motion.div>
 
@@ -340,26 +299,28 @@ function PopularCourses() {
         {currentIndex > 0 && (
           <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-white/80 to-transparent pointer-events-none" />
         )}
-        {currentIndex < maxIndex && (
+        {currentIndex < maxIndex && filteredCourses.length > 1 && (
           <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-white/80 to-transparent pointer-events-none" />
         )}
       </div>
 
-      {/* Dot Indicators */}
-      <div className="flex justify-center gap-2 mt-4">
-        {courses.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrentIndex(i)}
-            className={`transition-all duration-300 rounded-full touch-manipulation ${
-              i === currentIndex 
-                ? 'w-8 h-2 bg-gradient-to-r from-blue-600 to-green-600' 
-                : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
-            }`}
-            aria-label={`Go to slide ${i + 1}`}
-          />
-        ))}
-      </div>
+      {/* Dot Indicators - only show if more than 1 card */}
+      {filteredCourses.length > 1 && (
+        <div className="flex justify-center gap-2 mt-4">
+          {filteredCourses.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setCurrentIndex(i)}
+              className={`transition-all duration-300 rounded-full touch-manipulation ${
+                i === currentIndex 
+                  ? 'w-8 h-2 bg-gradient-to-r from-blue-600 to-green-600' 
+                  : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
+              }`}
+              aria-label={`Go to slide ${i + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </motion.section>
   );
 }
