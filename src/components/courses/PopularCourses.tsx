@@ -9,7 +9,7 @@ interface PopularCoursesProps {
   searchQuery?: string;
 }
 
-function PopularCourses({ searchQuery }: PopularCoursesProps) {
+function PopularCourses({ searchQuery = "" }: PopularCoursesProps) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
