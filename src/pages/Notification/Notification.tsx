@@ -104,33 +104,27 @@ function Notification() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [readFilter, setReadFilter] = useState<ReadFilter>('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [telegramUserId, setTelegramUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Get current user
+  // Get Telegram user ID
   useEffect(() => {
-    const getUser = async () => {
-      try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError) {
-          console.error("Error getting user:", userError);
-          setError("Failed to get user information");
-          setIsLoading(false);
-          return;
-        }
-        if (user) {
-          setUserId(user.id);
-        } else {
-          setError("No user found. Please log in.");
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.error("Error:", err);
-        setError("An unexpected error occurred");
+    try {
+      const telegram = window.Telegram?.WebApp;
+      
+      if (telegram?.initDataUnsafe?.user) {
+        const userId = String(telegram.initDataUnsafe.user.id);
+        setTelegramUserId(userId);
+        console.log("Telegram user ID:", userId);
+      } else {
+        setError("Telegram user not found. Please open the app in Telegram.");
         setIsLoading(false);
       }
-    };
-    getUser();
+    } catch (err) {
+      console.error("Error getting Telegram user:", err);
+      setError("Failed to get user information from Telegram");
+      setIsLoading(false);
+    }
   }, []);
 
   const unreadCount = notifications.filter(n => !n.read && !n.dismissed).length;
@@ -188,7 +182,7 @@ function Notification() {
   };
 
   const handleNotificationClick = async (notification: NotificationItem) => {
-    if (!notification.read && userId) {
+    if (!notification.read && telegramUserId) {
       setNotifications(prev =>
         prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
       );
@@ -198,7 +192,7 @@ function Notification() {
           .from("user_notifications")
           .update({ read: true })
           .eq("announcement_id", notification.id)
-          .eq("user_id", userId);
+          .eq("user_id", telegramUserId);
           
         if (error) console.error("Error marking as read:", error);
       } catch (error) {
@@ -212,7 +206,7 @@ function Notification() {
   };
 
   const handleMarkAsRead = async (id: string) => {
-    if (!userId) return;
+    if (!telegramUserId) return;
     
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, read: true } : n)
@@ -223,7 +217,7 @@ function Notification() {
         .from("user_notifications")
         .update({ read: true })
         .eq("announcement_id", id)
-        .eq("user_id", userId);
+        .eq("user_id", telegramUserId);
         
       if (error) console.error("Error marking as read:", error);
     } catch (error) {
@@ -232,7 +226,7 @@ function Notification() {
   };
 
   const handleMarkAsUnread = async (id: string) => {
-    if (!userId) return;
+    if (!telegramUserId) return;
     
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, read: false } : n)
@@ -243,7 +237,7 @@ function Notification() {
         .from("user_notifications")
         .update({ read: false })
         .eq("announcement_id", id)
-        .eq("user_id", userId);
+        .eq("user_id", telegramUserId);
         
       if (error) console.error("Error marking as unread:", error);
     } catch (error) {
@@ -252,7 +246,7 @@ function Notification() {
   };
 
   const handleDismiss = async (id: string) => {
-    if (!userId) return;
+    if (!telegramUserId) return;
     
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, dismissed: true } : n)
@@ -263,7 +257,7 @@ function Notification() {
         .from("user_notifications")
         .update({ dismissed: true })
         .eq("announcement_id", id)
-        .eq("user_id", userId);
+        .eq("user_id", telegramUserId);
         
       if (error) console.error("Error dismissing notification:", error);
     } catch (error) {
@@ -272,7 +266,7 @@ function Notification() {
   };
 
   const handleMarkAllRead = async () => {
-    if (!userId) return;
+    if (!telegramUserId) return;
     
     const unreadIds = notifications.filter(n => !n.read && !n.dismissed).map(n => n.id);
     
@@ -284,7 +278,7 @@ function Notification() {
           .from("user_notifications")
           .update({ read: true })
           .in("announcement_id", unreadIds)
-          .eq("user_id", userId);
+          .eq("user_id", telegramUserId);
           
         if (error) console.error("Error marking all as read:", error);
       } catch (error) {
@@ -294,7 +288,7 @@ function Notification() {
   };
 
   const handleClearRead = async () => {
-    if (!userId) return;
+    if (!telegramUserId) return;
     
     const readIds = notifications.filter(n => n.read && !n.dismissed).map(n => n.id);
     
@@ -310,7 +304,7 @@ function Notification() {
           .from("user_notifications")
           .update({ dismissed: true })
           .in("announcement_id", readIds)
-          .eq("user_id", userId);
+          .eq("user_id", telegramUserId);
           
         if (error) console.error("Error clearing read notifications:", error);
       } catch (error) {
@@ -320,7 +314,7 @@ function Notification() {
   };
 
   const fetchAnnouncements = async () => {
-    if (!userId) {
+    if (!telegramUserId) {
       setIsLoading(false);
       return;
     }
@@ -329,7 +323,9 @@ function Notification() {
     setError(null);
 
     try {
-      // First, try to get announcements with user_notifications
+      console.log("Fetching announcements for user:", telegramUserId);
+      
+      // Try to get announcements with user-specific notifications
       const { data, error } = await supabase
         .from("announcements")
         .select(`
@@ -340,7 +336,7 @@ function Notification() {
             user_id
           )
         `)
-        .eq("user_notifications.user_id", userId)
+        .eq("user_notifications.user_id", telegramUserId)
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -368,8 +364,8 @@ function Notification() {
 
         setNotifications(formatted);
       } else {
-        // If no announcements found, try fetching all announcements without user_notifications
-        // This handles the case where user_notifications entries don't exist yet
+        // If no results with user_notifications, fetch all announcements
+        console.log("No user-specific notifications found, fetching all");
         const { data: allData, error: allError } = await supabase
           .from("announcements")
           .select("*")
@@ -412,27 +408,27 @@ function Notification() {
   };
 
   useEffect(() => {
-    if (userId) {
+    if (telegramUserId) {
       fetchAnnouncements();
     }
-  }, [userId]);
+  }, [telegramUserId]);
 
   // Refresh notifications when the page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && userId) {
+      if (document.visibilityState === 'visible' && telegramUserId) {
         fetchAnnouncements();
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [userId]);
+  }, [telegramUserId]);
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
           <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <BellOff className="w-10 h-10 text-red-500" />
           </div>
@@ -442,7 +438,14 @@ function Notification() {
             onClick={() => {
               setError(null);
               setIsLoading(true);
-              fetchAnnouncements();
+              // Try to get Telegram user again
+              const telegram = window.Telegram?.WebApp;
+              if (telegram?.initDataUnsafe?.user) {
+                setTelegramUserId(String(telegram.initDataUnsafe.user.id));
+              } else {
+                setError("Telegram user not found");
+                setIsLoading(false);
+              }
             }}
             className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
           >
