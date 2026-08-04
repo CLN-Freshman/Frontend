@@ -10,6 +10,7 @@ import BottomNav from '@/components/BottomNav';
 import LoadingScreen from '@/components/LoadingScreen';
 import { useUserTracking } from '@/hooks/useUserTracking';
 import CourseDetail from './pages/Courses/CourseDetails';
+import Notification from './pages/Notification/Notification';
 
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -68,6 +69,11 @@ const AppContent: React.FC<{ loading: boolean; error: string | null }> = ({ load
         <Route path="/" element={
           <ProtectedRoute>
             <Home />
+          </ProtectedRoute>
+        } />
+        <Route path="/notification" element={
+          <ProtectedRoute>
+            <Notification />
           </ProtectedRoute>
         } />
         <Route path="/courses" element={
