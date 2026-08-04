@@ -106,7 +106,7 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
           schema: 'public',
           table: 'announcements'
         },
-        (payload) => {
+        () => {
           fetchNotifications();
         }
       )
