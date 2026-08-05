@@ -87,79 +87,68 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     
     setIsLoading(true);
     try {
-      // Fetch announcements with user-specific notification status
-      const { data, error } = await supabase
+      // First, get all announcements
+      const { data: announcements, error: announcementsError } = await supabase
         .from("announcements")
-        .select(`
-          *,
-          user_notifications!left (
-            read,
-            dismissed,
-            user_id
-          )
-        `)
-        .eq("user_notifications.user_id", telegramUserId)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Header - Error fetching notifications:", error);
+      if (announcementsError) {
+        console.error("Header - Error fetching announcements:", announcementsError);
         setIsLoading(false);
         return;
       }
 
-      if (data && data.length > 0) {
-        const formatted: NotificationItem[] = data.map((item: any) => ({
+      if (!announcements || announcements.length === 0) {
+        setNotifications([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Get user's notification status for these announcements
+      const announcementIds = announcements.map((a: any) => a.id);
+      const { data: userNotifications, error: userNotifError } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .eq("user_id", telegramUserId)
+        .in("announcement_id", announcementIds);
+
+      if (userNotifError) {
+        console.error("Header - Error fetching user notifications:", userNotifError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Create a map of user notification status
+      const userNotifMap = new Map();
+      userNotifications?.forEach((un: any) => {
+        userNotifMap.set(un.announcement_id, {
+          read: un.read || false,
+          dismissed: un.dismissed || false,
+        });
+      });
+
+      // Format notifications with user-specific status
+      const formatted: NotificationItem[] = announcements.map((item: any) => {
+        const userStatus = userNotifMap.get(item.id);
+        return {
           id: item.id.toString(),
           title: item.title || "Notification",
           message: item.message || "",
           type: (item.type as NotificationType) || "info",
           priority: (item.priority as NotificationPriority) || "medium",
           timestamp: item.created_at || new Date(),
-          read: item.user_notifications?.[0]?.read || false,
-          dismissed: item.user_notifications?.[0]?.dismissed || false,
+          read: userStatus?.read || false,
+          dismissed: userStatus?.dismissed || false,
           actionUrl: item.action_url || undefined,
           actionLabel: item.action_label || undefined,
           image: item.image || undefined,
           avatar: item.avatar || undefined,
           metadata: item.metadata || undefined,
-        }));
+        };
+      });
 
-        setNotifications(formatted);
-      } else {
-        // If no user-specific records, fetch all announcements
-        const { data: allData, error: allError } = await supabase
-          .from("announcements")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (allError) {
-          console.error("Header - Error fetching all announcements:", allError);
-          setIsLoading(false);
-          return;
-        }
-
-        if (allData && allData.length > 0) {
-          const formatted: NotificationItem[] = allData.map((item: any) => ({
-            id: item.id.toString(),
-            title: item.title || "Notification",
-            message: item.message || "",
-            type: (item.type as NotificationType) || "info",
-            priority: (item.priority as NotificationPriority) || "medium",
-            timestamp: item.created_at || new Date(),
-            read: false,
-            dismissed: false,
-            actionUrl: item.action_url || undefined,
-            actionLabel: item.action_label || undefined,
-            image: item.image || undefined,
-            avatar: item.avatar || undefined,
-            metadata: item.metadata || undefined,
-          }));
-
-          setNotifications(formatted);
-        } else {
-          setNotifications([]);
-        }
-      }
+      setNotifications(formatted);
     } catch (error) {
       console.error("Header - Error:", error);
     } finally {
@@ -167,6 +156,7 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     }
   };
 
+  // Initial fetch and real-time subscription
   useEffect(() => {
     if (telegramUserId) {
       fetchNotifications();
@@ -175,6 +165,8 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
 
   // Subscribe to real-time changes
   useEffect(() => {
+    if (!telegramUserId) return;
+
     const subscription = supabase
       .channel('announcements-changes')
       .on(
@@ -185,15 +177,31 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
           table: 'announcements'
         },
         () => {
-          if (telegramUserId) {
-            fetchNotifications();
-          }
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    // Also listen for user_notifications changes
+    const userNotifSubscription = supabase
+      .channel('user-notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_notifications',
+          filter: `user_id=eq.${telegramUserId}`
+        },
+        () => {
+          fetchNotifications();
         }
       )
       .subscribe();
 
     return () => {
       subscription.unsubscribe();
+      userNotifSubscription.unsubscribe();
     };
   }, [telegramUserId]);
 
@@ -226,15 +234,34 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
       );
       
       try {
-        const { error } = await supabase
+        // Check if user_notification exists
+        const { data: existing } = await supabase
           .from("user_notifications")
-          .update({ read: true })
+          .select("*")
           .eq("announcement_id", notification.id)
-          .eq("user_id", telegramUserId);
-          
-        if (error) console.error("Header - Error marking as read:", error);
+          .eq("user_id", telegramUserId)
+          .single();
+
+        if (existing) {
+          // Update existing
+          await supabase
+            .from("user_notifications")
+            .update({ read: true })
+            .eq("announcement_id", notification.id)
+            .eq("user_id", telegramUserId);
+        } else {
+          // Insert new
+          await supabase
+            .from("user_notifications")
+            .insert({
+              announcement_id: notification.id,
+              user_id: telegramUserId,
+              read: true,
+              dismissed: false,
+            });
+        }
       } catch (error) {
-        console.error("Header - Error:", error);
+        console.error("Header - Error marking as read:", error);
       }
     }
     
@@ -254,15 +281,34 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     );
     
     try {
-      const { error } = await supabase
+      // Check if user_notification exists
+      const { data: existing } = await supabase
         .from("user_notifications")
-        .update({ dismissed: true })
+        .select("*")
         .eq("announcement_id", id)
-        .eq("user_id", telegramUserId);
-        
-      if (error) console.error("Header - Error dismissing notification:", error);
+        .eq("user_id", telegramUserId)
+        .single();
+
+      if (existing) {
+        // Update existing
+        await supabase
+          .from("user_notifications")
+          .update({ dismissed: true })
+          .eq("announcement_id", id)
+          .eq("user_id", telegramUserId);
+      } else {
+        // Insert new
+        await supabase
+          .from("user_notifications")
+          .insert({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: false,
+            dismissed: true,
+          });
+      }
     } catch (error) {
-      console.error("Header - Error:", error);
+      console.error("Header - Error dismissing notification:", error);
     }
   };
 
@@ -277,15 +323,41 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     
     if (unreadIds.length > 0) {
       try {
-        const { error } = await supabase
+        // Get existing user_notifications for these announcements
+        const { data: existing } = await supabase
           .from("user_notifications")
-          .update({ read: true })
-          .in("announcement_id", unreadIds)
-          .eq("user_id", telegramUserId);
-          
-        if (error) console.error("Header - Error marking all as read:", error);
+          .select("*")
+          .eq("user_id", telegramUserId)
+          .in("announcement_id", unreadIds);
+
+        const existingIds = new Set(existing?.map((e: any) => e.announcement_id) || []);
+        
+        // Update existing
+        if (existing && existing.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .update({ read: true })
+            .eq("user_id", telegramUserId)
+            .in("announcement_id", unreadIds);
+        }
+
+        // Insert new ones that don't exist
+        const toInsert = unreadIds
+          .filter(id => !existingIds.has(id))
+          .map(id => ({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: true,
+            dismissed: false,
+          }));
+
+        if (toInsert.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .insert(toInsert);
+        }
       } catch (error) {
-        console.error("Header - Error:", error);
+        console.error("Header - Error marking all as read:", error);
       }
     }
     
@@ -301,15 +373,38 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     
     if (unreadIds.length > 0) {
       try {
-        const { error } = await supabase
+        // Get existing user_notifications
+        const { data: existing } = await supabase
           .from("user_notifications")
-          .update({ dismissed: true })
-          .in("announcement_id", unreadIds)
-          .eq("user_id", telegramUserId);
-          
-        if (error) console.error("Header - Error clearing notifications:", error);
+          .select("*")
+          .eq("user_id", telegramUserId)
+          .in("announcement_id", unreadIds);
+
+        if (existing && existing.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .update({ dismissed: true })
+            .eq("user_id", telegramUserId)
+            .in("announcement_id", unreadIds);
+        }
+
+        // Insert new ones
+        const toInsert = unreadIds
+          .filter(id => !existing?.some((e: any) => e.announcement_id === id))
+          .map(id => ({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: false,
+            dismissed: true,
+          }));
+
+        if (toInsert.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .insert(toInsert);
+        }
       } catch (error) {
-        console.error("Header - Error:", error);
+        console.error("Header - Error clearing notifications:", error);
       }
     }
   };

@@ -115,7 +115,7 @@ function Notification() {
       if (telegram?.initDataUnsafe?.user) {
         const userId = String(telegram.initDataUnsafe.user.id);
         setTelegramUserId(userId);
-        console.log("Telegram user ID:", userId);
+        console.log("Notification page - Telegram user ID:", userId);
       } else {
         setError("Telegram user not found. Please open the app in Telegram.");
         setIsLoading(false);
@@ -188,15 +188,32 @@ function Notification() {
       );
       
       try {
-        const { error } = await supabase
+        // Check if user_notification exists
+        const { data: existing } = await supabase
           .from("user_notifications")
-          .update({ read: true })
+          .select("*")
           .eq("announcement_id", notification.id)
-          .eq("user_id", telegramUserId);
-          
-        if (error) console.error("Error marking as read:", error);
+          .eq("user_id", telegramUserId)
+          .single();
+
+        if (existing) {
+          await supabase
+            .from("user_notifications")
+            .update({ read: true })
+            .eq("announcement_id", notification.id)
+            .eq("user_id", telegramUserId);
+        } else {
+          await supabase
+            .from("user_notifications")
+            .insert({
+              announcement_id: notification.id,
+              user_id: telegramUserId,
+              read: true,
+              dismissed: false,
+            });
+        }
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Error marking as read:", error);
       }
     }
     
@@ -205,113 +222,206 @@ function Notification() {
     }
   };
 
-  // const handleMarkAsRead = async (id: string) => {
-  //   if (!telegramUserId) return;
+  const handleMarkAsRead = async (id: string) => {
+    if (!telegramUserId) return;
     
-  //   setNotifications(prev =>
-  //     prev.map(n => n.id === id ? { ...n, read: true } : n)
-  //   );
+    setNotifications(prev =>
+      prev.map(n => n.id === id ? { ...n, read: true } : n)
+    );
     
-  //   try {
-  //     const { error } = await supabase
-  //       .from("user_notifications")
-  //       .update({ read: true })
-  //       .eq("announcement_id", id)
-  //       .eq("user_id", telegramUserId);
+    try {
+      const { data: existing } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .eq("announcement_id", id)
+        .eq("user_id", telegramUserId)
+        .single();
+
+      if (existing) {
+        await supabase
+          .from("user_notifications")
+          .update({ read: true })
+          .eq("announcement_id", id)
+          .eq("user_id", telegramUserId);
+      } else {
+        await supabase
+          .from("user_notifications")
+          .insert({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: true,
+            dismissed: false,
+          });
+      }
+    } catch (error) {
+      console.error("Error marking as read:", error);
+    }
+  };
+
+  const handleMarkAsUnread = async (id: string) => {
+    if (!telegramUserId) return;
+    
+    setNotifications(prev =>
+      prev.map(n => n.id === id ? { ...n, read: false } : n)
+    );
+    
+    try {
+      const { data: existing } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .eq("announcement_id", id)
+        .eq("user_id", telegramUserId)
+        .single();
+
+      if (existing) {
+        await supabase
+          .from("user_notifications")
+          .update({ read: false })
+          .eq("announcement_id", id)
+          .eq("user_id", telegramUserId);
+      } else {
+        await supabase
+          .from("user_notifications")
+          .insert({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: false,
+            dismissed: false,
+          });
+      }
+    } catch (error) {
+      console.error("Error marking as unread:", error);
+    }
+  };
+
+  const handleDismiss = async (id: string) => {
+    if (!telegramUserId) return;
+    
+    setNotifications(prev =>
+      prev.map(n => n.id === id ? { ...n, dismissed: true } : n)
+    );
+    
+    try {
+      const { data: existing } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .eq("announcement_id", id)
+        .eq("user_id", telegramUserId)
+        .single();
+
+      if (existing) {
+        await supabase
+          .from("user_notifications")
+          .update({ dismissed: true })
+          .eq("announcement_id", id)
+          .eq("user_id", telegramUserId);
+      } else {
+        await supabase
+          .from("user_notifications")
+          .insert({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: false,
+            dismissed: true,
+          });
+      }
+    } catch (error) {
+      console.error("Error dismissing notification:", error);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    if (!telegramUserId) return;
+    
+    const unreadIds = notifications.filter(n => !n.read && !n.dismissed).map(n => n.id);
+    
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    
+    if (unreadIds.length > 0) {
+      try {
+        // Get existing user_notifications
+        const { data: existing } = await supabase
+          .from("user_notifications")
+          .select("*")
+          .eq("user_id", telegramUserId)
+          .in("announcement_id", unreadIds);
+
+        const existingIds = new Set(existing?.map((e: any) => e.announcement_id) || []);
         
-  //     if (error) console.error("Error marking as read:", error);
-  //   } catch (error) {
-  //     console.error("Error:", error);
-  //   }
-  // };
+        if (existing && existing.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .update({ read: true })
+            .eq("user_id", telegramUserId)
+            .in("announcement_id", unreadIds);
+        }
 
-  // const handleMarkAsUnread = async (id: string) => {
-  //   if (!telegramUserId) return;
-    
-  //   setNotifications(prev =>
-  //     prev.map(n => n.id === id ? { ...n, read: false } : n)
-  //   );
-    
-  //   try {
-  //     const { error } = await supabase
-  //       .from("user_notifications")
-  //       .update({ read: false })
-  //       .eq("announcement_id", id)
-  //       .eq("user_id", telegramUserId);
-        
-  //     if (error) console.error("Error marking as unread:", error);
-  //   } catch (error) {
-  //     console.error("Error:", error);
-  //   }
-  // };
+        const toInsert = unreadIds
+          .filter(id => !existingIds.has(id))
+          .map(id => ({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: true,
+            dismissed: false,
+          }));
 
-  // const handleDismiss = async (id: string) => {
-  //   if (!telegramUserId) return;
-    
-  //   setNotifications(prev =>
-  //     prev.map(n => n.id === id ? { ...n, dismissed: true } : n)
-  //   );
-    
-  //   try {
-  //     const { error } = await supabase
-  //       .from("user_notifications")
-  //       .update({ dismissed: true })
-  //       .eq("announcement_id", id)
-  //       .eq("user_id", telegramUserId);
-        
-  //     if (error) console.error("Error dismissing notification:", error);
-  //   } catch (error) {
-  //     console.error("Error:", error);
-  //   }
-  // };
+        if (toInsert.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .insert(toInsert);
+        }
+      } catch (error) {
+        console.error("Error marking all as read:", error);
+      }
+    }
+  };
 
-  // const handleMarkAllRead = async () => {
-  //   if (!telegramUserId) return;
+  const handleClearRead = async () => {
+    if (!telegramUserId) return;
     
-  //   const unreadIds = notifications.filter(n => !n.read && !n.dismissed).map(n => n.id);
+    const readIds = notifications.filter(n => n.read && !n.dismissed).map(n => n.id);
     
-  //   setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    if (readIds.length === 0) return;
     
-  //   if (unreadIds.length > 0) {
-  //     try {
-  //       const { error } = await supabase
-  //         .from("user_notifications")
-  //         .update({ read: true })
-  //         .in("announcement_id", unreadIds)
-  //         .eq("user_id", telegramUserId);
-          
-  //       if (error) console.error("Error marking all as read:", error);
-  //     } catch (error) {
-  //       console.error("Error:", error);
-  //     }
-  //   }
-  // };
-
-  // const handleClearRead = async () => {
-  //   if (!telegramUserId) return;
-    
-  //   const readIds = notifications.filter(n => n.read && !n.dismissed).map(n => n.id);
-    
-  //   if (readIds.length === 0) return;
-    
-  //   if (window.confirm('Clear all read notifications?')) {
-  //     setNotifications(prev =>
-  //       prev.map(n => n.read ? { ...n, dismissed: true } : n)
-  //     );
+    if (window.confirm('Clear all read notifications?')) {
+      setNotifications(prev =>
+        prev.map(n => n.read ? { ...n, dismissed: true } : n)
+      );
       
-  //     try {
-  //       const { error } = await supabase
-  //         .from("user_notifications")
-  //         .update({ dismissed: true })
-  //         .in("announcement_id", readIds)
-  //         .eq("user_id", telegramUserId);
-          
-  //       if (error) console.error("Error clearing read notifications:", error);
-  //     } catch (error) {
-  //       console.error("Error:", error);
-  //     }
-  //   }
-  // };
+      try {
+        const { data: existing } = await supabase
+          .from("user_notifications")
+          .select("*")
+          .eq("user_id", telegramUserId)
+          .in("announcement_id", readIds);
+
+        if (existing && existing.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .update({ dismissed: true })
+            .eq("user_id", telegramUserId)
+            .in("announcement_id", readIds);
+        }
+
+        const toInsert = readIds
+          .filter(id => !existing?.some((e: any) => e.announcement_id === id))
+          .map(id => ({
+            announcement_id: id,
+            user_id: telegramUserId,
+            read: true,
+            dismissed: true,
+          }));
+
+        if (toInsert.length > 0) {
+          await supabase
+            .from("user_notifications")
+            .insert(toInsert);
+        }
+      } catch (error) {
+        console.error("Error clearing read notifications:", error);
+      }
+    }
+  };
 
   const fetchAnnouncements = async () => {
     if (!telegramUserId) {
@@ -325,71 +435,68 @@ function Notification() {
     try {
       console.log("Fetching announcements for user:", telegramUserId);
       
-const { data, error } = await supabase
-  .from("announcements")
-  .select("*")
-  .order("created_at", { ascending: false });
+      // Get all announcements
+      const { data: announcements, error: announcementsError } = await supabase
+        .from("announcements")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching announcements:", error);
+      if (announcementsError) {
+        console.error("Error fetching announcements:", announcementsError);
         setError("Failed to load notifications");
         setIsLoading(false);
         return;
       }
 
-  if (data && data.length > 0) {
-  const formatted: NotificationItem[] = data.map((item: any) => ({
-    id: item.id.toString(),
-    title: item.title || "Notification",
-    message: item.message || "",
-    type: (item.type as NotificationType) || "info",
-    priority: (item.priority as NotificationPriority) || "medium",
-    timestamp: item.created_at || new Date(),
-    read: false,
-    dismissed: false,
-    actionUrl: item.action_url,
-    actionLabel: item.action_label,
-    image: item.image,
-    avatar: item.avatar,
-  }));
-
-  setNotifications(formatted);
-      } else {
-        // If no results with user_notifications, fetch all announcements
-        console.log("No user-specific notifications found, fetching all");
-        const { data: allData, error: allError } = await supabase
-          .from("announcements")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (allError) {
-          console.error("Error fetching all announcements:", allError);
-          setError("Failed to load notifications");
-          setIsLoading(false);
-          return;
-        }
-
-        if (allData && allData.length > 0) {
-          const formatted: NotificationItem[] = allData.map((item: any) => ({
-            id: item.id.toString(),
-            title: item.title || "Notification",
-            message: item.message || "",
-            type: (item.type as NotificationType) || "info",
-            priority: (item.priority as NotificationPriority) || "medium",
-            timestamp: item.created_at || new Date(),
-            read: false,
-            dismissed: false,
-            actionUrl: item.action_url || undefined,
-            actionLabel: item.action_label || undefined,
-            image: item.image || undefined,
-            avatar: item.avatar || undefined,
-          }));
-
-          setNotifications(formatted);
-        } else {
-          setNotifications([]);
-        }
+      if (!announcements || announcements.length === 0) {
+        setNotifications([]);
+        setIsLoading(false);
+        return;
       }
+
+      // Get user's notification status
+      const announcementIds = announcements.map((a: any) => a.id);
+      const { data: userNotifications, error: userNotifError } = await supabase
+        .from("user_notifications")
+        .select("*")
+        .eq("user_id", telegramUserId)
+        .in("announcement_id", announcementIds);
+
+      if (userNotifError) {
+        console.error("Error fetching user notifications:", userNotifError);
+        setIsLoading(false);
+        return;
+      }
+
+      // Create a map of user notification status
+      const userNotifMap = new Map();
+      userNotifications?.forEach((un: any) => {
+        userNotifMap.set(un.announcement_id, {
+          read: un.read || false,
+          dismissed: un.dismissed || false,
+        });
+      });
+
+      // Format notifications with user-specific status
+      const formatted: NotificationItem[] = announcements.map((item: any) => {
+        const userStatus = userNotifMap.get(item.id);
+        return {
+          id: item.id.toString(),
+          title: item.title || "Notification",
+          message: item.message || "",
+          type: (item.type as NotificationType) || "info",
+          priority: (item.priority as NotificationPriority) || "medium",
+          timestamp: item.created_at || new Date(),
+          read: userStatus?.read || false,
+          dismissed: userStatus?.dismissed || false,
+          actionUrl: item.action_url || undefined,
+          actionLabel: item.action_label || undefined,
+          image: item.image || undefined,
+          avatar: item.avatar || undefined,
+        };
+      });
+
+      setNotifications(formatted);
     } catch (error) {
       console.error("Error:", error);
       setError("An unexpected error occurred");
@@ -404,16 +511,45 @@ const { data, error } = await supabase
     }
   }, [telegramUserId]);
 
-  // Refresh notifications when the page becomes visible
+  // Subscribe to real-time changes
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && telegramUserId) {
-        fetchAnnouncements();
-      }
-    };
+    if (!telegramUserId) return;
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    const subscription = supabase
+      .channel('announcements-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'announcements'
+        },
+        () => {
+          fetchAnnouncements();
+        }
+      )
+      .subscribe();
+
+    const userNotifSubscription = supabase
+      .channel('user-notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_notifications',
+          filter: `user_id=eq.${telegramUserId}`
+        },
+        () => {
+          fetchAnnouncements();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      userNotifSubscription.unsubscribe();
+    };
   }, [telegramUserId]);
 
   if (error) {
@@ -429,7 +565,6 @@ const { data, error } = await supabase
             onClick={() => {
               setError(null);
               setIsLoading(true);
-              // Try to get Telegram user again
               const telegram = window.Telegram?.WebApp;
               if (telegram?.initDataUnsafe?.user) {
                 setTelegramUserId(String(telegram.initDataUnsafe.user.id));
@@ -461,6 +596,14 @@ const { data, error } = await supabase
                 <ArrowLeft className="w-5 h-5 text-gray-600" />
               </button>
               <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Bell className="w-5 h-5 text-gray-700" />
+                  {!isLoading && unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
                 <h1 className="text-lg font-semibold text-gray-800">Notifications</h1>
               </div>
             </div>
@@ -469,7 +612,7 @@ const { data, error } = await supabase
               <div className="flex items-center gap-1">
                 {unreadCount > 0 && (
                   <button
-                    // onClick={handleMarkAllRead}
+                    onClick={handleMarkAllRead}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                     title="Mark all as read"
                   >
@@ -478,7 +621,7 @@ const { data, error } = await supabase
                 )}
                 {readCount > 0 && (
                   <button
-                    // onClick={handleClearRead}
+                    onClick={handleClearRead}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                     title="Clear read notifications"
                   >
@@ -601,10 +744,10 @@ const { data, error } = await supabase
                           <div className="flex items-center gap-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                             {notification.read ? (
                               <button
-                                // onClick={(e) => {
-                                //   e.stopPropagation();
-                                //   handleMarkAsUnread(notification.id);
-                                // }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsUnread(notification.id);
+                                }}
                                 className="p-1.5 text-gray-400 hover:text-blue-600 rounded-full transition-colors"
                                 title="Mark as unread"
                               >
@@ -612,10 +755,10 @@ const { data, error } = await supabase
                               </button>
                             ) : (
                               <button
-                                // onClick={(e) => {
-                                //   e.stopPropagation();
-                                //   handleMarkAsRead(notification.id);
-                                // }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMarkAsRead(notification.id);
+                                }}
                                 className="p-1.5 text-gray-400 hover:text-green-600 rounded-full transition-colors"
                                 title="Mark as read"
                               >
@@ -623,10 +766,10 @@ const { data, error } = await supabase
                               </button>
                             )}
                             <button
-                              // onClick={(e) => {
-                              //   e.stopPropagation();
-                              //   handleDismiss(notification.id);
-                              // }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDismiss(notification.id);
+                              }}
                               className="p-1.5 text-gray-400 hover:text-red-500 rounded-full transition-colors"
                               title="Dismiss"
                             >
