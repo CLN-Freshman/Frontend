@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X, Check, Clock, ChevronRight, BellOff, Circle, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import {supabase} from "@utils/supabase";
+import { supabase } from "@utils/supabase";
 
 // Types
 type NotificationType = 
@@ -25,6 +25,7 @@ interface NotificationItem {
   priority: NotificationPriority;
   timestamp: Date | string;
   read: boolean;
+  dismissed: boolean;
   actionUrl?: string;
   actionLabel?: string;
   avatar?: string;
@@ -45,6 +46,7 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [telegramUserId, setTelegramUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -57,46 +59,122 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     }
   }, []);
 
-  // Fetch notifications from Supabase
+  // Get Telegram user ID
+  useEffect(() => {
+    try {
+      const telegram = window.Telegram?.WebApp;
+      
+      if (telegram?.initDataUnsafe?.user) {
+        const userId = String(telegram.initDataUnsafe.user.id);
+        setTelegramUserId(userId);
+        console.log("Header - Telegram user ID:", userId);
+      } else {
+        console.warn("Header - Telegram user not found");
+        setIsLoading(false);
+      }
+    } catch (err) {
+      console.error("Header - Error getting Telegram user:", err);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Fetch notifications from Supabase with user-specific data
   const fetchNotifications = async () => {
+    if (!telegramUserId) {
+      setIsLoading(false);
+      return;
+    }
+    
     setIsLoading(true);
     try {
+      // Fetch announcements with user-specific notification status
       const { data, error } = await supabase
         .from("announcements")
-        .select("*")
+        .select(`
+          *,
+          user_notifications!left (
+            read,
+            dismissed,
+            user_id
+          )
+        `)
+        .eq("user_notifications.user_id", telegramUserId)
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error("Error fetching notifications:", error);
+        console.error("Header - Error fetching notifications:", error);
         setIsLoading(false);
         return;
       }
 
-      const formatted: NotificationItem[] = data.map((item: any) => ({
-        id: item.id.toString(),
-        title: item.title || "Notification",
-        message: item.message || "",
-        type: (item.type as NotificationType) || "info",
-        priority: (item.priority as NotificationPriority) || "medium",
-        timestamp: item.created_at || new Date(),
-        read: item.read || false,
-        actionUrl: item.action_url || undefined,
-        actionLabel: item.action_label || undefined,
-        image: item.image || undefined,
-        avatar: item.avatar || undefined,
-        metadata: item.metadata || undefined,
-      }));
+      if (data && data.length > 0) {
+        const formatted: NotificationItem[] = data.map((item: any) => ({
+          id: item.id.toString(),
+          title: item.title || "Notification",
+          message: item.message || "",
+          type: (item.type as NotificationType) || "info",
+          priority: (item.priority as NotificationPriority) || "medium",
+          timestamp: item.created_at || new Date(),
+          read: item.user_notifications?.[0]?.read || false,
+          dismissed: item.user_notifications?.[0]?.dismissed || false,
+          actionUrl: item.action_url || undefined,
+          actionLabel: item.action_label || undefined,
+          image: item.image || undefined,
+          avatar: item.avatar || undefined,
+          metadata: item.metadata || undefined,
+        }));
 
-      setNotifications(formatted);
+        setNotifications(formatted);
+      } else {
+        // If no user-specific records, fetch all announcements
+        const { data: allData, error: allError } = await supabase
+          .from("announcements")
+          .select("*")
+          .order("created_at", { ascending: false });
+
+        if (allError) {
+          console.error("Header - Error fetching all announcements:", allError);
+          setIsLoading(false);
+          return;
+        }
+
+        if (allData && allData.length > 0) {
+          const formatted: NotificationItem[] = allData.map((item: any) => ({
+            id: item.id.toString(),
+            title: item.title || "Notification",
+            message: item.message || "",
+            type: (item.type as NotificationType) || "info",
+            priority: (item.priority as NotificationPriority) || "medium",
+            timestamp: item.created_at || new Date(),
+            read: false,
+            dismissed: false,
+            actionUrl: item.action_url || undefined,
+            actionLabel: item.action_label || undefined,
+            image: item.image || undefined,
+            avatar: item.avatar || undefined,
+            metadata: item.metadata || undefined,
+          }));
+
+          setNotifications(formatted);
+        } else {
+          setNotifications([]);
+        }
+      }
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Header - Error:", error);
     } finally {
       setIsLoading(false);
     }
   };
-  useEffect(() => {
-    fetchNotifications();
 
+  useEffect(() => {
+    if (telegramUserId) {
+      fetchNotifications();
+    }
+  }, [telegramUserId]);
+
+  // Subscribe to real-time changes
+  useEffect(() => {
     const subscription = supabase
       .channel('announcements-changes')
       .on(
@@ -107,7 +185,9 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
           table: 'announcements'
         },
         () => {
-          fetchNotifications();
+          if (telegramUserId) {
+            fetchNotifications();
+          }
         }
       )
       .subscribe();
@@ -115,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [telegramUserId]);
 
   const getInitials = () => {
     const first = firstName?.charAt(0) || '';
@@ -134,11 +214,11 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
 
   const profileImage = getTelegramAvatar() || avatarUrl;
 
-  const unreadNotifications = notifications.filter(n => !n.read);
+  const unreadNotifications = notifications.filter(n => !n.read && !n.dismissed);
   const unreadCount = unreadNotifications.length;
 
   const handleNotificationClick = async (notification: NotificationItem) => {
-    if (!notification.read) {
+    if (!notification.read && telegramUserId) {
       setNotifications(prev =>
         prev.map(n =>
           n.id === notification.id ? { ...n, read: true } : n
@@ -147,13 +227,14 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
       
       try {
         const { error } = await supabase
-          .from("announcements")
+          .from("user_notifications")
           .update({ read: true })
-          .eq("id", notification.id);
+          .eq("announcement_id", notification.id)
+          .eq("user_id", telegramUserId);
           
-        if (error) console.error("Error marking as read:", error);
+        if (error) console.error("Header - Error marking as read:", error);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Header - Error:", error);
       }
     }
     
@@ -164,22 +245,31 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
   };
 
   const handleNotificationDismiss = async (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    if (!telegramUserId) return;
+    
+    setNotifications(prev =>
+      prev.map(n =>
+        n.id === id ? { ...n, dismissed: true } : n
+      )
+    );
     
     try {
       const { error } = await supabase
-        .from("announcements")
-        .delete()
-        .eq("id", id);
+        .from("user_notifications")
+        .update({ dismissed: true })
+        .eq("announcement_id", id)
+        .eq("user_id", telegramUserId);
         
-      if (error) console.error("Error deleting notification:", error);
+      if (error) console.error("Header - Error dismissing notification:", error);
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Header - Error:", error);
     }
   };
 
   const handleMarkAllRead = async () => {
-    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (!telegramUserId) return;
+    
+    const unreadIds = notifications.filter(n => !n.read && !n.dismissed).map(n => n.id);
     
     setNotifications(prev =>
       prev.map(n => ({ ...n, read: true }))
@@ -188,13 +278,14 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     if (unreadIds.length > 0) {
       try {
         const { error } = await supabase
-          .from("announcements")
+          .from("user_notifications")
           .update({ read: true })
-          .in("id", unreadIds);
+          .in("announcement_id", unreadIds)
+          .eq("user_id", telegramUserId);
           
-        if (error) console.error("Error marking all as read:", error);
+        if (error) console.error("Header - Error marking all as read:", error);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Header - Error:", error);
       }
     }
     
@@ -202,20 +293,23 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
   };
 
   const handleClearAll = async () => {
-    const unreadIds = notifications.filter(n => !n.read).map(n => n.id);
+    if (!telegramUserId) return;
     
-    setNotifications(prev => prev.filter(n => n.read));
+    const unreadIds = notifications.filter(n => !n.read && !n.dismissed).map(n => n.id);
+    
+    setNotifications(prev => prev.filter(n => n.read || n.dismissed));
     
     if (unreadIds.length > 0) {
       try {
         const { error } = await supabase
-          .from("announcements")
-          .delete()
-          .in("id", unreadIds);
+          .from("user_notifications")
+          .update({ dismissed: true })
+          .in("announcement_id", unreadIds)
+          .eq("user_id", telegramUserId);
           
-        if (error) console.error("Error clearing notifications:", error);
+        if (error) console.error("Header - Error clearing notifications:", error);
       } catch (error) {
-        console.error("Error:", error);
+        console.error("Header - Error:", error);
       }
     }
   };
@@ -314,6 +408,7 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
     if (diffDays < 7) return `${diffDays}d ago`;
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -426,7 +521,7 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
                         Mark all read
                       </button>
                     )}
-                    {!isLoading && notifications.filter(n => !n.read).length > 0 && (
+                    {!isLoading && notifications.filter(n => !n.read && !n.dismissed).length > 0 && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -590,9 +685,9 @@ const Header: React.FC<HeaderProps> = ({ firstName, lastName, avatarUrl }) => {
                     <span>View all notifications</span>
                     <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
                   </button>
-                  {!isLoading && notifications.filter(n => n.read).length > 0 && (
+                  {!isLoading && notifications.filter(n => n.read && !n.dismissed).length > 0 && (
                     <p className="text-xs text-slate-400 text-center mt-1">
-                      {notifications.filter(n => n.read).length} read notifications
+                      {notifications.filter(n => n.read && !n.dismissed).length} read notifications
                     </p>
                   )}
                 </div>
